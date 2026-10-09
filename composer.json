@@ -1,0 +1,62 @@
+{
+    "name": "markdown-office/commonmark-generic-directives",
+    "description": "A standalone league/commonmark extension implementing the Generic Directives RFC: container (:::), leaf (::) and text (:) directives with attribute, #id and .class syntax.",
+    "type": "library",
+    "keywords": [
+        "markdown",
+        "commonmark",
+        "directive",
+        "extension",
+        "container-directive",
+        "leaf-directive",
+        "text-directive",
+        "attributes"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Fabian Graßl",
+            "email": "mail@fabiangrassl.de"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "league/commonmark": "^2.10"
+    },
+    "require-dev": {
+        "pestphp/pest": "^3.0 || ^4.0 || ^5.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "MarkdownOffice\\CommonMark\\Directive\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "MarkdownOffice\\CommonMark\\Directive\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "scripts": {
+        "test": "pest",
+        "test:unit": "pest --testsuite=unit",
+        "test:feature": "pest --testsuite=feature",
+        "test:coverage": "pest --coverage --min=100",
+        "check": [
+            "@composer validate --strict",
+            "@check:audit",
+            "@check:stan",
+            "@test"
+        ],
+        "check:audit": "composer audit --no-interaction",
+        "check:stan": "@php tools/phpstan.phar analyse --no-progress",
+        "test:readme": "pest --testsuite=readme"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

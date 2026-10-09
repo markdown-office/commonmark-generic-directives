@@ -1,0 +1,9 @@
+parameters:
+    # Level 9 is the maximum, and a parser is about as small a body of code as exists
+    # that can be fully described by types. Anything it cannot describe here is a place
+    # where the code is doing something the reader has to guess at.
+    level: 9
+    paths:
+        - src
+        - tests
+    treatPhpDocTypesAsCertain: false

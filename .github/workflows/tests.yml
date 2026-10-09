@@ -1,0 +1,208 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # The declared floor and the current release. Nothing between them is where a
+        # regression in this package would show up: it is a parser and a value object,
+        # and the only version-dependent thing in it is a language construct.
+        #
+        # `composer update` picks the test runner to match: Pest 5 needs PHP 8.4, so the
+        # 8.2 job gets Pest 3. A single pinned runner would have made the 8.2 row either
+        # impossible or vacuous.
+        php: ['8.2', '8.5']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, dom, tokenizer, json
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-progress --no-interaction
+
+      - name: The whole suite
+        run: vendor/bin/pest
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, dom, tokenizer, json, xdebug
+          coverage: xdebug
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-progress --no-interaction
+
+      # 100% is the gate because the alternative is a number that only goes down. A parser
+      # is almost entirely reachable by construction, so an uncovered line here is a
+      # branch nobody has worked out what it does yet.
+      #
+      # The report files are written in this same run rather than the analysis job
+      # producing them again: the gate and the machine-readable report are one
+      # execution, so the figure this job checks is the figure that gets uploaded.
+      - name: Every line is reached
+        run: |
+          vendor/bin/pest --coverage --min=100 \
+            --coverage-clover=build/coverage/clover.xml \
+            --log-junit build/coverage/junit.xml
+
+      # The HTML report is skipped; nothing reads it. The artifact is for a human
+      # asking why the number moved, and for reproducing it outside CI.
+      - name: Upload the reports
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: coverage
+          path: build/coverage
+          retention-days: 7
+
+  static-analysis:
+    name: Static analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, dom, tokenizer, json
+          coverage: none
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-progress --no-interaction
+
+      # Fetched by checksum rather than as a dependency: a package that exists only to
+      # parse Markdown should not drag an analyser into anyone's install.
+      - name: Fetch PHPStan
+        run: |
+          mkdir -p tools
+          curl -sSL -o tools/phpstan.phar \
+            https://github.com/phpstan/phpstan/releases/download/2.3.1/phpstan.phar
+          echo "85157dba3d95d77ca603d2b7303aa78a538f9e3b56ccad07dd794c53aa96d1ae  tools/phpstan.phar" | sha256sum -c -
+
+      - name: Analyse
+        run: php tools/phpstan.phar analyse --no-progress
+
+  audit:
+    name: Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+          tools: composer:v2
+
+      # This is a library, so there is no committed lock file — the one thing `audit`
+      # reads. Without this step it prints "no installed packages" and exits zero, which
+      # is a green tick that checked nothing.
+      - name: Resolve the dependency tree
+        run: composer update --no-install --prefer-dist --no-progress --no-interaction
+
+      - name: No known vulnerabilities
+        run: composer audit --locked --no-interaction
+
+  # The richer analysis, on SonarCloud.
+  #
+  # Its own job rather than a step in another one, so that a finding and a failing
+  # test are two different lines on a pull request instead of one red cross. It
+  # needs the others to have passed: analysing a commit whose suite does not run
+  # would report on code nobody has checked.
+  #
+  # Not on a tag. SonarCloud analyses branches, and a tag ref is not one, so the
+  # scan is accepted and then the gate check is refused with a 403 — a red run on
+  # every release for a gate that already passed on the commit the tag points at.
+  sonar:
+    name: sonarcloud
+    runs-on: ubuntu-latest
+    needs: [tests, coverage, static-analysis]
+    if: >-
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+      && !startsWith(github.ref, 'refs/tags/')
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: https://sonarcloud.io
+    steps:
+      # A missing token otherwise surfaces as an authentication failure several
+      # steps later, which says nothing about what to do about it. This says it.
+      - name: Is there a token?
+        if: env.SONAR_TOKEN == ''
+        run: |
+          echo "::error::SONAR_TOKEN is not set, so there is nothing to authenticate with."
+          echo "::error::Create one at https://sonarcloud.io/account/security, then add it"
+          echo "::error::under Settings -> Secrets and variables -> Actions."
+          exit 1
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # SonarCloud needs the full history to attribute new code, which a
+          # shallow clone would not have.
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, dom, tokenizer, json
+          # pcov rather than xdebug: the suite runs once more here, and xdebug is
+          # roughly an order of magnitude slower on a suite this size.
+          coverage: pcov
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-progress --no-interaction
+
+      # Both reports the analysis reads, produced in one run rather than the
+      # second one being repeated. This repeats the coverage job rather than
+      # downloading its artifact on purpose: a missing or expired artifact would
+      # then be an authentication-shaped failure that says nothing about coverage.
+      - name: Coverage and test results for the analysis
+        run: |
+          vendor/bin/pest --coverage --min=100 \
+            --coverage-clover=build/coverage/clover.xml \
+            --log-junit build/coverage/junit.xml
+
+      - name: Analyse
+        uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8
+
+      # Fails the pull request when the quality gate is red, which is the whole
+      # point of running the analysis here rather than letting SonarCloud do it
+      # on the side.
+      - name: Quality gate
+        uses: SonarSource/sonarqube-quality-gate-action@7a5fffe8e523c40e0c740b6bc2712ab503e52efa # v1
