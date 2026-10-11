@@ -59,15 +59,15 @@ describe('registration', function () {
 
 describe('rejecting an unknown name', function () {
     it('throws, naming the directive and its shape', function () {
-        new DirectiveRegistry(['col'])->assertKnown('nope', DirectiveType::Container);
+        (new DirectiveRegistry(['col']))->assertKnown('nope', DirectiveType::Container);
     })->throws(UnknownDirective::class, 'Unknown container directive "nope"');
 
     it('names the alternatives, because a message that only says "no" is not a fix', function () {
-        new DirectiveRegistry(['col', 'callout', 'badge:text'])->assertKnown('nope', DirectiveType::Text);
+        (new DirectiveRegistry(['col', 'callout', 'badge:text']))->assertKnown('nope', DirectiveType::Text);
     })->throws(UnknownDirective::class, 'Registered: badge:text, callout, col.');
 
     it('distinguishes a name registered for another shape from an unknown one', function () {
-        new DirectiveRegistry(['badge:leaf'])->assertKnown('badge', DirectiveType::Text);
+        (new DirectiveRegistry(['badge:leaf']))->assertKnown('badge', DirectiveType::Text);
     })->throws(UnknownDirective::class, 'Unknown text directive "badge". Registered: badge:leaf.');
 
     it('accepts anything when nothing is registered', function () {

@@ -29,10 +29,17 @@ use MarkdownOffice\CommonMark\Directive\Node\DirectiveInline;
  */
 final class DirectiveRenderer implements NodeRendererInterface
 {
+    /**
+     * @param DirectiveBlock|DirectiveInline $node
+     *
+     * The interface declares `Node` and a parameter may only be widened, so the two
+     * classes this renderer is registered for cannot be named in the signature. Narrowing
+     * them here rather than with an `assert()` is deliberate: `zend.assertions=-1`, which
+     * is what CI runs, removes the call before the code is compiled, and an assertion that
+     * disappears under an ini setting is not a check.
+     */
     public function render(Node $node, ChildNodeRendererInterface $childRenderer): string
     {
-        \assert($node instanceof DirectiveBlock || $node instanceof DirectiveInline);
-
         $inner = $childRenderer->renderNodes($node->children());
         $label = $node->getLabel();
 
