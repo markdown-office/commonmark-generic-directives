@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-11
+
 ### Added
 
 - `GenericDirectiveExtension` — the Generic Directives RFC for league/commonmark 2.x:
@@ -30,3 +32,5 @@ All notable changes to this package are documented here. The format follows
   CommonMark's inline engine offers no way for a parser to claim the rest of a run.
 - A container closes on a line of at least as many colons as it opened with, so a body
   can show a nested container by opening its own with four.
+
+[0.1.0]: https://github.com/markdown-office/commonmark-generic-directives/releases/tag/v0.1.0

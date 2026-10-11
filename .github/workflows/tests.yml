@@ -3,6 +3,11 @@ name: tests
 on:
   push:
     branches: [main]
+    # A tag is what Packagist reads, so the commit it points at is the one people will
+    # install. Nothing else here would notice that commit had rotted since `main` last
+    # went green, so the tag runs the same suite rather than the release shipping on
+    # the strength of a check against a different commit.
+    tags: ['v*']
   pull_request:
 
 permissions:
