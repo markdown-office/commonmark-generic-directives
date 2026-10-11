@@ -48,8 +48,14 @@ describe('a container directive', function () {
 });
 
 describe('nesting', function () {
-    it('nests a container inside a container of the same fence length', function () {
-        $html = render(":::outer\n:::inner\ndeep\n:::\nback\n:::");
+    // Three tests ask about this one document: what it renders to, how its children are
+    // shaped, and whether the outer fence is left alone by the inner one. Written once
+    // so that a change to the fixture cannot quietly mean something different in one of
+    // them.
+    $nested = ":::outer\n:::inner\ndeep\n:::\nback\n:::";
+
+    it('nests a container inside a container of the same fence length', function () use ($nested) {
+        $html = render($nested);
 
         expect(trim($html))->toBe(
             '<div data-directive="outer"><div data-directive="inner"><p>deep</p></div>' . "\n"
@@ -57,8 +63,8 @@ describe('nesting', function () {
         );
     });
 
-    it('keeps the content after an inner container inside the outer one', function () {
-        $document = parse(":::outer\n:::inner\ndeep\n:::\nback\n:::");
+    it('keeps the content after an inner container inside the outer one', function () use ($nested) {
+        $document = parse($nested);
 
         $outer = directive($document, 'outer');
 
@@ -76,10 +82,10 @@ describe('nesting', function () {
             ->toContain('<div data-directive="two">');
     });
 
-    it('closes the outer one again once the inner one is closed', function () {
+    it('closes the outer one again once the inner one is closed', function () use ($nested) {
         // The failure this guards against is the outer container consuming the inner's
         // closing fence, which would drop everything after it out of the outer block.
-        $outer = directive(parse(":::outer\n:::inner\ndeep\n:::\nback\n:::"), 'outer');
+        $outer = directive(parse($nested), 'outer');
 
         expect(textOf($outer))->toContain('back');
     });
@@ -234,8 +240,12 @@ describe('a registry that knows the names', function () {
 });
 
 describe('the AST the parsers build', function () {
-    it('exposes name, type, attributes and label on a block', function () {
-        $found = directive(parse('::image[Chart]{src="a.png"}'), 'image');
+    // The same leaf directive twice over: one test for what the node exposes, one for
+    // whether it writes itself back out as the source it was read from.
+    $leaf = '::image[Chart]{src="a.png"}';
+
+    it('exposes name, type, attributes and label on a block', function () use ($leaf) {
+        $found = directive(parse($leaf), 'image');
 
         expect($found->getName())->toBe('image')
             ->and($found->getType())->toBe(DirectiveType::Leaf)
@@ -243,9 +253,9 @@ describe('the AST the parsers build', function () {
             ->and($found->getAttributes()->toArray())->toBe(['src' => 'a.png']);
     });
 
-    it('writes itself back to source', function () {
-        expect((string) directive(parse('::image[Chart]{src="a.png"}'), 'image'))
-            ->toBe('::image[Chart]{src="a.png"}');
+    it('writes itself back to source', function () use ($leaf) {
+        expect((string) directive(parse($leaf), 'image'))
+            ->toBe($leaf);
     });
 
     it('writes a text directive back to source', function () {

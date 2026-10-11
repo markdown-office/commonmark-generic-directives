@@ -60,84 +60,144 @@ final class DirectiveAttributes implements Countable, IteratorAggregate, JsonSer
     {
         $values = [];
         $length = \strlen($input);
+        $i = 0;
 
-        for ($i = 0; $i < $length;) {
-            // Skip the whitespace between attributes.
-            if (\ctype_space($input[$i])) {
-                $i++;
-                continue;
-            }
+        while ($i < $length) {
+            $before = $i;
+            self::parseOne($input, $i, $length, $values);
 
-            if ($input[$i] === '#' || $input[$i] === '.') {
-                $shortcut = $input[$i];
-                $i++;
-                $name = self::readIdentifier($input, $i, $length);
-
-                if ($name === '') {
-                    continue;
-                }
-
-                if ($shortcut === '#') {
-                    $values['id'] = $name;
-                } else {
-                    // Several `.class` entries accumulate rather than replace.
-                    $existing = $values['class'] ?? null;
-                    $values['class'] = \is_string($existing) && $existing !== ''
-                        ? $existing . ' ' . $name
-                        : $name;
-                }
-
-                continue;
-            }
-
-            $name = self::readIdentifier($input, $i, $length);
-
-            if ($name === '') {
-                // Not an attribute start; step over the byte so the loop terminates.
-                $i++;
-                continue;
-            }
-
-            // `{wide}` and `{wide=}` are both "present"; only a real value is stored.
-            if ($i >= $length || $input[$i] !== '=') {
-                $values[$name] = true;
-                continue;
-            }
-
-            $i++; // step over `=`
-
-            if ($i < $length && ($input[$i] === '"' || $input[$i] === "'")) {
-                $quote = $input[$i];
-                $i++;
-                $value = '';
-
-                while ($i < $length && $input[$i] !== $quote) {
-                    $value .= $input[$i];
-                    $i++;
-                }
-
-                if ($i < $length) {
-                    $i++; // step over the closing quote
-                }
-
-                $values[$name] = $value;
-                continue;
-            }
-
-            $value = '';
-
-            // A bare value runs to the next space or to a brace. The brace matters when a
-            // shorthand and an attribute block arrive in one string, which is what
-            // `#lead.terse{type=ok}` is.
-            while ($i < $length && !\ctype_space($input[$i]) && $input[$i] !== '{' && $input[$i] !== '}') {
-                $value .= $input[$i];
+            // A byte that starts no attribute at all is stepped over here, or the loop
+            // would spin on it forever. Every other path moves `$i` itself.
+            if ($i === $before) {
                 $i++;
             }
-
-            $values[$name] = $value;
         }
 
         return new self($values);
+    }
+
+    /**
+     * Consumes one attribute, or nothing at all.
+     *
+     * `$i` is left wherever the piece stopped rather than returned alongside a status:
+     * the pieces differ only in whether they consumed bytes, so the position is the
+     * whole of the answer.
+     *
+     * @param array<string, string|true> $values
+     */
+    private static function parseOne(string $input, int &$i, int $length, array &$values): void
+    {
+        if (\ctype_space($input[$i])) {
+            $i++;
+
+            return;
+        }
+
+        if ($input[$i] === '#' || $input[$i] === '.') {
+            self::parseShorthand($input, $i, $length, $values);
+
+            return;
+        }
+
+        self::parsePair($input, $i, $length, $values);
+    }
+
+    /**
+     * @param array<string, string|true> $values
+     */
+    private static function parseShorthand(string $input, int &$i, int $length, array &$values): void
+    {
+        $shortcut = $input[$i];
+        $i++;
+        $name = self::readIdentifier($input, $i, $length);
+
+        // `{#.}` is a shorthand with no name behind it. The `#` is already stepped over,
+        // so there is nothing left to skip here and the loop will move on.
+        if ($name === '') {
+            return;
+        }
+
+        if ($shortcut === '#') {
+            $values['id'] = $name;
+
+            return;
+        }
+
+        // Several `.class` entries accumulate rather than replace.
+        $existing = $values['class'] ?? null;
+        $values['class'] = \is_string($existing) && $existing !== ''
+            ? $existing . ' ' . $name
+            : $name;
+    }
+
+    /**
+     * @param array<string, string|true> $values
+     */
+    private static function parsePair(string $input, int &$i, int $length, array &$values): void
+    {
+        $name = self::readIdentifier($input, $i, $length);
+
+        if ($name === '') {
+            return;
+        }
+
+        // `{wide}` and `{wide=}` are both "present"; only a real value is stored.
+        if ($i >= $length || $input[$i] !== '=') {
+            $values[$name] = true;
+
+            return;
+        }
+
+        $i++; // step over `=`
+
+        $values[$name] = self::readValue($input, $i, $length);
+    }
+
+    private static function readValue(string $input, int &$i, int $length): string
+    {
+        // The `??` matters: a `{name=}` runs out of input here, and reading past the end
+        // of the string is a warning rather than an empty string.
+        $quote = $input[$i] ?? '';
+
+        if ($quote === '"' || $quote === "'") {
+            return self::readQuoted($input, $i, $length, $quote);
+        }
+
+        return self::readBare($input, $i, $length);
+    }
+
+    private static function readQuoted(string $input, int &$i, int $length, string $quote): string
+    {
+        $i++; // step over the opening quote
+        $value = '';
+
+        while ($i < $length && $input[$i] !== $quote) {
+            $value .= $input[$i];
+            $i++;
+        }
+
+        // An unterminated quote ends with the input rather than swallowing the rest of
+        // the document, so this is conditional rather than a step taken on faith.
+        if ($i < $length) {
+            $i++; // step over the closing quote
+        }
+
+        return $value;
+    }
+
+    private static function readBare(string $input, int &$i, int $length): string
+    {
+        $value = '';
+
+        // A bare value runs to the next space or to a brace. The brace matters when a
+        // shorthand and an attribute block arrive in one string, which is what
+        // `#lead.terse{type=ok}` is.
+        while ($i < $length && !\ctype_space($input[$i]) && $input[$i] !== '{' && $input[$i] !== '}') {
+            $value .= $input[$i];
+            $i++;
+        }
+
+        return $value;
     }
 
     /**
@@ -311,29 +371,40 @@ final class DirectiveAttributes implements Countable, IteratorAggregate, JsonSer
             $pairs[] = '#' . $id;
         }
 
-        $class = $this->getString('class');
-
-        if ($class !== null) {
-            foreach (\preg_split('/\s+/', $class) ?: [] as $name) {
-                if ($name !== '') {
-                    $pairs[] = '.' . $name;
-                }
-            }
+        foreach (self::classNames($this->getString('class')) as $name) {
+            $pairs[] = '.' . $name;
         }
 
         foreach ($this->values as $name => $value) {
+            // `id` and `class` were written above in the shorthand form; writing them
+            // again here would print each of them twice, once in each shape.
             if ($name === 'id' || $name === 'class') {
                 continue;
             }
 
-            if ($value === true) {
-                $pairs[] = $name;
-                continue;
-            }
-
-            $pairs[] = $name . '="' . \str_replace('"', '\\"', $value) . '"';
+            $pairs[] = $value === true
+                ? $name
+                : $name . '="' . \str_replace('"', '\\"', $value) . '"';
         }
 
         return $pairs === [] ? '' : '{' . implode(' ', $pairs) . '}';
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function classNames(?string $class): array
+    {
+        if ($class === null) {
+            return [];
+        }
+
+        // Split on whitespace alone, not on commas as `getList()` does: a comma is a
+        // legal character in a class name, and treating it as a separator here would
+        // rewrite the author's name on the way back out.
+        return \array_values(\array_filter(
+            \preg_split('/\s+/', $class) ?: [],
+            static fn (string $part): bool => $part !== '',
+        ));
     }
 }

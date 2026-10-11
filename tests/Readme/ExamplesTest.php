@@ -11,16 +11,16 @@ use MarkdownOffice\CommonMark\Directive\Tests\Support\Readme;
  * reader, which is the whole point. See {@see Readme} for the convention.
  */
 /** The page the examples are read from. */
-$readme = __DIR__ . '/../../README.md';
+$readme = repoPath('README.md');
 
 describe('the worked examples in the README', function () use ($readme) {
     it('has at least one example to check', function () use ($readme) {
         expect(Readme::examples($readme))->not->toBeEmpty();
     });
 
-    it('converts exactly as the page says it does', function (string $markdown, string $html, int $line) {
+    it('converts exactly as the page says it does', function (string $markdown, string $html) {
         expect(render($markdown))->toBe($html . "\n");
-    })->with(Readme::examples($readme));
+    })->with(pageDataset('README.md', Readme::examples($readme)));
 
     it('does not claim an example the page does not contain', function () use ($readme) {
         $page = (string) file_get_contents($readme);

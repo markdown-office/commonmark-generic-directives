@@ -144,17 +144,22 @@ describe('reading typed values', function () {
 });
 
 describe('carrying attributes', function () {
+    // Two attributes, written once: counting them, iterating them and merging them are
+    // three views of the same object, so a change to what `parse()` accepts should have
+    // to be made in one place.
+    $two = 'a=1 b=2';
+
     it('reports whether an attribute is present', function () {
         expect(DirectiveAttributes::parse('a=1')->has('a'))->toBeTrue()
             ->and(DirectiveAttributes::parse('a=1')->has('b'))->toBeFalse();
     });
 
-    it('counts its attributes', function () {
-        expect(DirectiveAttributes::parse('a=1 b=2'))->toHaveCount(2);
+    it('counts its attributes', function () use ($two) {
+        expect(DirectiveAttributes::parse($two))->toHaveCount(2);
     });
 
-    it('can be iterated as name to value', function () {
-        expect(\iterator_to_array(DirectiveAttributes::parse('a=1 b=2')))
+    it('can be iterated as name to value', function () use ($two) {
+        expect(\iterator_to_array(DirectiveAttributes::parse($two)))
             ->toBe(['a' => '1', 'b' => '2']);
     });
 
@@ -163,8 +168,8 @@ describe('carrying attributes', function () {
             ->toBe('{"a":"1","wide":true}');
     });
 
-    it('merges with another set, letting the other win', function () {
-        expect(DirectiveAttributes::parse('a=1 b=2')->mergedWith(DirectiveAttributes::parse('b=3 c=4'))->toArray())
+    it('merges with another set, letting the other win', function () use ($two) {
+        expect(DirectiveAttributes::parse($two)->mergedWith(DirectiveAttributes::parse('b=3 c=4'))->toArray())
             ->toBe(['a' => '1', 'b' => '3', 'c' => '4']);
     });
 

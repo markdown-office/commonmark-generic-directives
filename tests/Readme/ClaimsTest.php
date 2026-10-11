@@ -11,7 +11,7 @@ use MarkdownOffice\CommonMark\Directive\Node\DirectiveInline;
 use MarkdownOffice\CommonMark\Directive\Tests\Support\Readme;
 
 /** The page every claim here is checked against. */
-$readme = __DIR__ . '/../../README.md';
+$readme = repoPath('README.md');
 
 /**
  * The claims on the page that are prose rather than a worked example.
@@ -23,7 +23,7 @@ $readme = __DIR__ . '/../../README.md';
  */
 describe('the README', function () use ($readme) {
     it('names the package the composer file declares', function () use ($readme) {
-        $composer = composerIdentity(__DIR__ . '/../../composer.json');
+        $composer = composerIdentity(repoPath('composer.json'));
 
         expect($composer['name'])->toBe('markdown-office/commonmark-generic-directives')
             ->and($composer['require']['php'] ?? null)->toBe('^8.2')
@@ -32,9 +32,9 @@ describe('the README', function () use ($readme) {
     });
 });
 
-describe('the API the README lists', function () {
-    it('behaves the way the API listing says for both node kinds', function () {
-        $readme = (string) file_get_contents(__DIR__ . '/../../README.md');
+describe('the API the README lists', function () use ($readme) {
+    it('behaves the way the API listing says for both node kinds', function () use ($readme) {
+        $readme = (string) file_get_contents($readme);
 
         foreach (['getName', 'getType', 'getLabel', 'getAttributes', 'isContainer'] as $method) {
             expect($readme)->toContain($method);
@@ -181,22 +181,22 @@ describe('the HTML claims the README makes', function () {
     });
 });
 
-describe('the gates the README quotes', function () {
-    it('still holds', function () {
+describe('the gates the README quotes', function () use ($readme) {
+    it('still holds', function () use ($readme) {
         // The page makes two quantitative claims about itself. Cheap to check, and a
         // claim that rots is worse than no claim.
-        $page = (string) file_get_contents(__DIR__ . '/../../README.md');
+        $page = (string) file_get_contents($readme);
 
         expect($page)->toContain('100% covered')
             ->and($page)->toContain('PHPStan level 9')
-            ->and((string) file_get_contents(__DIR__ . '/../../phpstan.neon.dist'))
+            ->and((string) file_get_contents(repoPath('phpstan.neon.dist')))
             ->toContain('level: 9');
     });
 });
 
-describe('the README extractor', function () {
-    it('finds the paired examples it claims to find', function () {
-        expect(Readme::examples(__DIR__ . '/../../README.md'))->toHaveCount(3);
+describe('the README extractor', function () use ($readme) {
+    it('finds the paired examples it claims to find', function () use ($readme) {
+        expect(Readme::examples($readme))->toHaveCount(3);
     });
 
     it('ignores a markdown block with no html block after it', function () {
@@ -217,8 +217,8 @@ describe('the README extractor', function () {
         @\unlink($path);
     });
 
-    it('reports the line an example starts on, so a failure points at the page', function () {
-        foreach (Readme::examples(__DIR__ . '/../../README.md') as $example) {
+    it('reports the line an example starts on, so a failure points at the page', function () use ($readme) {
+        foreach (Readme::examples($readme) as $example) {
             expect($example['line'])->toBeGreaterThan(0);
         }
     });

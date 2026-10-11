@@ -13,6 +13,7 @@ use MarkdownOffice\CommonMark\Directive\Directive\DirectiveSyntax;
 use MarkdownOffice\CommonMark\Directive\GenericDirectiveExtension;
 use MarkdownOffice\CommonMark\Directive\Node\DirectiveBlock;
 use MarkdownOffice\CommonMark\Directive\Node\DirectiveInline;
+use MarkdownOffice\CommonMark\Directive\Tests\Support\BrokenFixture;
 
 /**
  * The environment the tests parse with.
@@ -84,7 +85,7 @@ function directive(Document $document, string $name): DirectiveBlock|DirectiveIn
         }
     }
 
-    throw new RuntimeException(sprintf(
+    throw new BrokenFixture(sprintf(
         'No directive named "%s". Found: %s.',
         $name,
         implode(', ', array_map(
@@ -132,6 +133,43 @@ function textOf(DirectiveBlock|DirectiveInline $node): string
     return $text;
 }
 /**
+ * A path in the repository root, for the files the tests read.
+ *
+ * The tests check claims the repository makes about itself — the README, composer.json,
+ * phpstan.neon.dist — and each of those is named by a relative path from wherever the
+ * test file happens to sit. Resolving it here means the layout is described once, and a
+ * file that moves is a one-line change rather than one per test that reads it.
+ */
+function repoPath(string $file): string
+{
+    return \dirname(__DIR__) . '/' . $file;
+}
+
+/**
+ * A Pest dataset named for the page line each example sits on.
+ *
+ * Pest passes an associative dataset to the test as named arguments, so a row that
+ * carried `line` would have to be declared as a parameter whether or not the test wanted
+ * it — and the alternative is a failure that prints the whole Markdown of the example
+ * that broke. This spends the line on the test name instead, which is where it is worth
+ * having: a red row then says which line of README.md to go and look at.
+ *
+ * @param list<array{markdown: string, html: string, line: int}> $examples
+ *
+ * @return array<string, array{0: string, 1: string}>
+ */
+function pageDataset(string $page, array $examples): array
+{
+    $rows = [];
+
+    foreach ($examples as $example) {
+        $rows[\basename($page) . ':' . $example['line']] = [$example['markdown'], $example['html']];
+    }
+
+    return $rows;
+}
+
+/**
  * A block pattern match, with the "did not match" case made loud.
  *
  * @return array{0: string, 1: int, 2: string, 3: string|null, 4: string, 5: string|null}
@@ -141,7 +179,7 @@ function blockMatch(string $line): array
     $match = DirectiveSyntax::matchBlock($line);
 
     if ($match === null) {
-        throw new RuntimeException(sprintf('"%s" is not a block directive.', $line));
+        throw new BrokenFixture(sprintf('"%s" is not a block directive.', $line));
     }
 
     return $match;
@@ -164,12 +202,12 @@ function composerIdentity(string $path): array
     $require = \is_array($decoded) ? ($decoded['require'] ?? null) : null;
 
     if (!\is_string($name) || !\is_array($require) || \array_is_list($require)) {
-        throw new RuntimeException(sprintf('"%s" does not have the expected shape.', $path));
+        throw new BrokenFixture(sprintf('"%s" does not have the expected shape.', $path));
     }
 
     foreach ($require as $key => $version) {
         if (!\is_string($key) || !\is_string($version)) {
-            throw new RuntimeException(sprintf('"%s" has a non-string requirement.', $path));
+            throw new BrokenFixture(sprintf('"%s" has a non-string requirement.', $path));
         }
     }
 

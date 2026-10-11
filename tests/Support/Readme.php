@@ -26,7 +26,7 @@ final class Readme
         $lines = \file($path, \FILE_IGNORE_NEW_LINES);
 
         if ($lines === false) {
-            throw new \RuntimeException(\sprintf('Cannot read "%s".', $path));
+            throw new BrokenFixture(\sprintf('Cannot read "%s".', $path));
         }
 
         $examples = [];
@@ -43,26 +43,9 @@ final class Readme
                 continue;
             }
 
-            $trimmed = \trim($line);
-
-            if (\str_starts_with($trimmed, '```')) {
+            if (\str_starts_with(\trim($line), '```')) {
                 // The block after a Markdown one, if it is HTML, is the claim.
-                $expected = null;
-
-                for ($next = $number + 1; $next < \count($lines); $next++) {
-                    if (\str_starts_with(\trim($lines[$next]), '```html')) {
-                        for ($body = $next + 1; $body < \count($lines); $body++) {
-                            if (\str_starts_with(\trim($lines[$body]), '```')) {
-                                $expected = \implode("\n", \array_slice($lines, $next + 1, $body - $next - 1));
-                                break 2;
-                            }
-                        }
-                    }
-
-                    if (\trim($lines[$next]) !== '') {
-                        break;
-                    }
-                }
+                $expected = self::htmlFollowing($lines, $number + 1);
 
                 if ($expected !== null) {
                     $examples[] = [
@@ -73,6 +56,7 @@ final class Readme
                 }
 
                 $markdown = null;
+
                 continue;
             }
 
@@ -80,5 +64,37 @@ final class Readme
         }
 
         return $examples;
+    }
+
+    /**
+     * The body of the HTML block at or after `$from`, or null when there is not one.
+     *
+     * A blank line between the two fences is allowed; anything else is not. Prose sitting
+     * between a Markdown example and an HTML one means the page has moved on to talk
+     * about something, and pairing them anyway would assert a conversion nobody wrote.
+     *
+     * @param list<string> $lines
+     */
+    private static function htmlFollowing(array $lines, int $from): ?string
+    {
+        $total = \count($lines);
+
+        for ($next = $from; $next < $total; $next++) {
+            if (\str_starts_with(\trim($lines[$next]), '```html')) {
+                for ($body = $next + 1; $body < $total; $body++) {
+                    if (\str_starts_with(\trim($lines[$body]), '```')) {
+                        return \implode("\n", \array_slice($lines, $next + 1, $body - $next - 1));
+                    }
+                }
+            }
+
+            // An unterminated ```html lands here: the inner loop ran out without finding
+            // its closing fence, so there is no body and this is not a claim.
+            if (\trim($lines[$next]) !== '') {
+                return null;
+            }
+        }
+
+        return null;
     }
 }

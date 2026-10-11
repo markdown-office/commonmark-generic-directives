@@ -19,6 +19,10 @@ use MarkdownOffice\CommonMark\Directive\GenericDirectiveExtension;
  * interesting cases here are the ones where that could go wrong.
  */
 describe('writing a directive as HTML', function () {
+    // The closing half of a container, for the tests below that each open with a
+    // different attribute list and then need the same body and the same fence. Kept as
+    // one name so the fence cannot end up spelled two ways across them.
+    $body = "\nx\n:::";
     it('carries the name on the element', function () {
         expect(render(":::callout\nx\n:::"))->toContain('<div data-directive="callout">');
     });
@@ -45,8 +49,8 @@ describe('writing a directive as HTML', function () {
         expect(render('::image[<script>alert(1)</script>]'))->not->toContain('<script>');
     });
 
-    it('escapes an attribute value rather than writing it as markup', function () {
-        expect(render(':::t{title="<script>alert(1)</script>"}' . "\nx\n:::"))
+    it('escapes an attribute value rather than writing it as markup', function () use ($body) {
+        expect(render(':::t{title="<script>alert(1)</script>"}' . $body))
             ->not->toContain('<script>');
     });
 
@@ -54,25 +58,25 @@ describe('writing a directive as HTML', function () {
         expect(render('A :t[x]{v="<b>y</b>"} b'))->not->toContain('<b>y</b>');
     });
 
-    it('refuses to let an author overwrite the directive name', function () {
+    it('refuses to let an author overwrite the directive name', function () use ($body) {
         // Otherwise `:::a{data-directive="b"}` renders as an element that claims to be
         // something it is not, and the markup is what a consumer sees first.
-        expect(render(':::a{data-directive="b"}' . "\nx\n:::"))
+        expect(render(':::a{data-directive="b"}' . $body))
             ->toBe('<div data-directive="a"><p>x</p></div>' . "\n");
     });
 
-    it('namespaces an event handler so it cannot become a script', function () {
+    it('namespaces an event handler so it cannot become a script', function () use ($body) {
         // The document is authored data, and this is the one place where an
         // author-supplied string would otherwise reach a live page as code.
-        $html = render(':::t{onclick="steal()"}' . "\nx\n:::");
+        $html = render(':::t{onclick="steal()"}' . $body);
 
         expect($html)->toContain('data-onclick="steal()"')
             ->and($html)->not->toMatch('/<[^>]*\sonclick=/');
     });
 
-    it('keeps an attribute that merely starts with the letters of on', function () {
+    it('keeps an attribute that merely starts with the letters of on', function () use ($body) {
         // A blocklist of event names would drop `only` along with `onclick`.
-        expect(render(':::t{only=1}' . "\nx\n:::"))->toContain('data-only="1"');
+        expect(render(':::t{only=1}' . $body))->toContain('data-only="1"');
     });
 
     it('renders a directive with no attributes and no body as an empty element', function () {
