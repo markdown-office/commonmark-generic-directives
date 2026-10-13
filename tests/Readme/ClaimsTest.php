@@ -54,6 +54,10 @@ describe('the API the README lists', function () use ($readme) {
 
         expect($block->isContainer())->toBeFalse()
             ->and($inline->isContainer())->toBeFalse();
+
+        // The listing says a container written without a name gives null, which is the one
+        // way `getName()` can answer anything but a string.
+        expect(directives(parse("::: {.myClass}\nbody\n:::"))[0]->getName())->toBeNull();
     });
 
     it('has every typed accessor the README promises, with the behaviour it describes', function () {
@@ -139,7 +143,7 @@ describe('the shapes the README tabulates', function () {
         $byName = [];
 
         foreach (directives($document) as $node) {
-            $byName[$node->getName()] = $node;
+            $byName[(string) $node->getName()] = $node;
         }
 
         expect($byName['t'])->toBeInstanceOf(DirectiveInline::class)
@@ -151,6 +155,23 @@ describe('the shapes the README tabulates', function () {
 
     it('closes a container on at least as many colons as it opened with', function () {
         expect(render("::::outer\n:::\nstill inside\n::::"))->toContain('still inside');
+    });
+});
+
+describe('the tolerances the README says a block directive has', function () {
+    it('spaces the parts out, which an inline directive may not do', function () {
+        expect(render(':: callout'))->toContain('data-directive="callout"')
+            ->and(render(':::callout [label] {.python}'))->toContain('data-directive="callout"')
+            ->and(render(': callout'))->not->toContain('data-directive');
+    });
+
+    it('has a container written without a name as a div with no name on it', function () {
+        expect(render("::: {.myClass}\nbody\n:::"))->toBe('<div data-class="myClass"><p>body</p></div>' . "\n");
+    });
+
+    it('ignores colons at the end of the opening line, but not a line of them alone', function () {
+        expect(render(":::a:::\nbody\n:::"))->toContain('data-directive="a"')
+            ->and(render(":::\nbody\n:::"))->not->toContain('<div');
     });
 });
 
@@ -196,7 +217,7 @@ describe('the gates the README quotes', function () use ($readme) {
 
 describe('the README extractor', function () use ($readme) {
     it('finds the paired examples it claims to find', function () use ($readme) {
-        expect(Readme::examples($readme))->toHaveCount(3);
+        expect(Readme::examples($readme))->toHaveCount(5);
     });
 
     it('ignores a markdown block with no html block after it', function () {

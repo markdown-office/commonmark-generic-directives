@@ -97,6 +97,74 @@ describe('nesting', function () {
     });
 });
 
+describe('a container with no name', function () {
+    it('is recognised, and has no name to read', function () {
+        $found = directives(parse("::: {.myClass}\nsome markdown\n:::"))[0];
+
+        expect($found)->toBeInstanceOf(DirectiveBlock::class)
+            ->and($found->getName())->toBeNull()
+            ->and($found->getType())->toBe(DirectiveType::Container)
+            ->and($found->getAttributes()->getString('class'))->toBe('myClass');
+    });
+
+    it('parses its body as Markdown, because it is a container like any other', function () {
+        expect(render("::: {.myClass}\nsome **markdown**\n:::"))
+            ->toBe('<div data-class="myClass"><p>some <strong>markdown</strong></p></div>' . "\n");
+    });
+
+    it('is not something a registry can be missing a name for', function () {
+        expect(render("::: {.myClass}\nbody\n:::", new DirectiveRegistry(['col'])))
+            ->toBe('<div data-class="myClass"><p>body</p></div>' . "\n");
+    });
+
+    it('closes on a bare :::, the line it would have opened had it a name', function () {
+        $found = directives(parse("::: {.myClass}\nbody\n:::"))[0];
+
+        expect($found->children())->toHaveCount(1)
+            ->and(textOf($found))->toBe('body');
+    });
+
+    it('leaves a bare ::: on a line of its own as text', function () {
+        // Nothing to close, so nothing is claimed: a fence that also opened a container
+        // would need a second fence to end it.
+        expect(render(":::\nbody\n:::"))->toBe("<p>:::\nbody\n:::</p>\n");
+    });
+
+    it('closes a named container on the same bare ::: without opening a second one', function () {
+        $found = directives(parse(":::a\nbody\n:::\nafter\n"));
+
+        expect($found)->toHaveCount(1)
+            ->and(textOf($found[0]))->toBe('body');
+    });
+});
+
+describe('colons at the end of the opening line', function () {
+    it('are read as nothing at all, as the RFC says they are', function () {
+        $found = directives(parse(
+            ":::::::::::: SPOILER :::::::::::::\nWe're going to spoil it\n"
+            . \str_repeat(':', 34)
+        ))[0];
+
+        expect($found->getName())->toBe('SPOILER')
+            ->and($found->getType())->toBe(DirectiveType::Container)
+            ->and(textOf($found))->toBe("We're going to spoil it");
+    });
+
+    it('do not count towards the fence the container closes on', function () {
+        // Four colons opened it and the trailing four are decorative, so the RFC's rule that
+        // a closing line is longer than the opening line still says three is too few.
+        expect(trim(render(":::: a ::::\nbody\n\n:::\nstill inside")))
+            ->toBe('<div data-directive="a"><p>body</p>' . "\n" . '<p>:::' . "\n" . 'still inside</p></div>')
+            ->and(trim(render(":::: a ::::\nbody\n\n::::\nafter")))
+            ->toBe('<div data-directive="a"><p>body</p></div>' . "\n" . '<p>after</p>');
+    });
+
+    it('may be written after the attributes rather than after the name', function () {
+        expect(trim(render(":::note{type=info}:::\nbody\n:::")))
+            ->toBe('<div data-directive="note" data-type="info"><p>body</p></div>');
+    });
+});
+
 describe('a leaf directive', function () {
     it('is recognised as a block', function () {
         $found = directive(parse('::image{src="a.png"}'), 'image');
@@ -119,6 +187,10 @@ describe('a leaf directive', function () {
 
     it('carries a label', function () {
         expect(directive(parse('::image[Revenue chart]'), 'image')->getLabel())->toBe('Revenue chart');
+    });
+
+    it('takes the name the RFC lets be spaced away from the fence', function () {
+        expect(trim(render(':: image[Revenue chart]')))->toBe('<div data-directive="image">Revenue chart</div>');
     });
 
     it('does not swallow the next line', function () {
@@ -174,6 +246,12 @@ describe('a text directive', function () {
 describe('what is deliberately not a directive', function () {
     it('leaves a colon before a space alone', function () {
         expect(trim(render('Note: this is prose.')))->toBe('<p>Note: this is prose.</p>');
+    });
+
+    it('leaves a colon before a space alone even with no word in front of it', function () {
+        // The space is the rule, not the word in front of it: this is the case only the
+        // space can reject, which is why a block directive may have one and this may not.
+        expect(render(': note here'))->not->toContain('data-directive');
     });
 
     it('leaves a colon between digits alone', function () {

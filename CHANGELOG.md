@@ -6,6 +6,27 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The parts of a block directive may be spaced out for readability, as the RFC has them:
+  `:: name`, `:::eval [label] {.python}`.
+- A container may be written without a name. `::: {.myClass}` falls back to a div, which is
+  what the RFC says a nameless directive does. A line of colons on its own still closes a
+  container rather than opening one, so an opener has to have something else on its line.
+- Non-significant colons at the end of the opening line, so
+  `:::::::::::: SPOILER :::::::::::::` opens the container it looks like it opens. They do
+  not count towards the fence it closes on.
+
+### Changed
+
+- `DirectiveBlock::getName()` returns `?string`. A container written without a name has
+  none, and the RFC's fallback is a div rather than a directive called `div`.
+- `DirectiveRegistry::assertKnown()` takes `?string` and accepts a nameless directive: a
+  registry lists names, and there is no name for it to be missing.
+- The default renderer leaves `data-directive` off a container with no name rather than
+  writing it empty. The key stays reserved, so an author attribute still cannot name an
+  element that has no name.
+
 ## [0.1.0] - 2026-10-11
 
 ### Added

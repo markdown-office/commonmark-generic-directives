@@ -29,14 +29,64 @@ describe('the block pattern', function () {
         expect(DirectiveSyntax::matchBlock(':badge[x]'))->toBeNull();
     });
 
-    it('rejects a fence with no name', function () {
-        expect(DirectiveSyntax::matchBlock(':::'))->toBeNull()
-            ->and(DirectiveSyntax::matchBlock('::'))->toBeNull();
+    it('rejects a fence that is nothing but colons, since that is how a container closes', function () {
+        expect(DirectiveSyntax::matchBlock('::'))->toBeNull()
+            ->and(DirectiveSyntax::matchBlock(':::'))->toBeNull()
+            ->and(DirectiveSyntax::matchBlock('::::::'))->toBeNull()
+            ->and(DirectiveSyntax::matchBlock(':::   '))->toBeNull()
+            ->and(DirectiveSyntax::matchBlock('::: :::'))->toBeNull()
+            ->and(DirectiveSyntax::matchBlock(':: :'))->toBeNull();
     });
 
     it('rejects a name that does not start with a letter', function () {
         expect(DirectiveSyntax::matchBlock('::1bad'))->toBeNull()
-            ->and(DirectiveSyntax::matchBlock(':: bad'))->toBeNull();
+            ->and(DirectiveSyntax::matchBlock(':::2fast'))->toBeNull();
+    });
+
+    it('allows spaces after the fence, which the RFC has interspersed for readability', function () {
+        expect(blockMatch(':: callout')[2])->toBe('callout')
+            ->and(blockMatch("::\tcallout")[2])->toBe('callout')
+            ->and(blockMatch(':::  callout')[1])->toBe(3);
+    });
+
+    it('allows spaces between the parts, which is how the RFC writes them', function () {
+        $match = blockMatch(':::eval [label] {.python}');
+
+        expect($match[2])->toBe('eval')
+            ->and($match[3])->toBe('label')
+            ->and($match[5])->toBe('{.python}');
+    });
+
+    it('reads a container with no name as one with no name', function () {
+        $match = blockMatch('::: {.myClass}');
+
+        expect($match[2])->toBeNull()
+            ->and($match[5])->toBe('{.myClass}');
+    });
+
+    it('takes the bare shorthands of a container with no name', function () {
+        $match = blockMatch(':::.lead');
+
+        expect($match[2])->toBeNull()
+            ->and($match[4])->toBe('.lead');
+    });
+
+    it('rejects a leaf with no name, which the RFC grants only to a container', function () {
+        // The RFC's nameless fallback is a div around a body. A leaf has no body, so there
+        // is nothing for it to be a div of, and the author's line stays their line.
+        expect(DirectiveSyntax::matchBlock(':: {.myClass}'))->toBeNull()
+            ->and(DirectiveSyntax::matchBlock(':: [label]'))->toBeNull();
+    });
+
+    it('reads the name written between two runs of colons', function () {
+        $match = blockMatch(':::::::::::: SPOILER :::::::::::::');
+
+        expect($match[1])->toBe(12)
+            ->and($match[2])->toBe('SPOILER');
+    });
+
+    it('does not let the trailing colons swallow what follows them', function () {
+        expect(DirectiveSyntax::matchBlock(':::a:::b'))->toBeNull();
     });
 
     it('reads a name with dashes and digits', function () {
@@ -90,6 +140,13 @@ describe('the closing fence', function () {
 
     it('does not close with fewer colons than it opened with', function () {
         expect(\preg_match(DirectiveSyntax::closingPattern(4), ':::'))->toBe(0);
+    });
+
+    it('closes the RFC\'s spoiler, whose opening line has colons at both ends', function () {
+        // `:::::::::::: SPOILER :::::::::::::` opens a twelve-colon container: the trailing
+        // run is decorative, and the RFC's own closing line of thirty-four is longer than
+        // the opening line either way it is counted.
+        expect(\preg_match(DirectiveSyntax::closingPattern(12), \str_repeat(':', 34)))->toBe(1);
     });
 
     it('allows trailing whitespace', function () {

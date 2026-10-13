@@ -89,7 +89,7 @@ function directive(Document $document, string $name): DirectiveBlock|DirectiveIn
         'No directive named "%s". Found: %s.',
         $name,
         implode(', ', array_map(
-            static fn (DirectiveBlock|DirectiveInline $node): string => $node->getName(),
+            static fn (DirectiveBlock|DirectiveInline $node): string => $node->getName() ?? '(no name)',
             directives($document)
         )) ?: 'none'
     ));
@@ -172,7 +172,7 @@ function pageDataset(string $page, array $examples): array
 /**
  * A block pattern match, with the "did not match" case made loud.
  *
- * @return array{0: string, 1: int, 2: string, 3: string|null, 4: string, 5: string|null}
+ * @return array{0: string, 1: int, 2: string|null, 3: string|null, 4: string, 5: string|null}
  */
 function blockMatch(string $line): array
 {

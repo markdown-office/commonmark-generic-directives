@@ -83,6 +83,16 @@ describe('writing a directive as HTML', function () {
         expect(trim(render('::a')))->toBe('<div data-directive="a"></div>');
     });
 
+    it('leaves the name off an element written without one', function () {
+        expect(render("::: {.myClass}\nbody\n:::"))->toBe('<div data-class="myClass"><p>body</p></div>' . "\n");
+    });
+
+    it('does not let an author attribute name an element that has no name', function () {
+        // The key stays reserved whether or not the node has a name to put on it, so
+        // `data-directive` never appears on something the document did not name.
+        expect(render("::: {directive=fake}\nbody\n:::"))->not->toContain('data-directive');
+    });
+
     it('can be replaced by a consumer that knows what the directive means', function () {
         $environment = new Environment();
         $environment->addExtension(new CommonMarkCoreExtension());

@@ -90,9 +90,13 @@ final class DirectiveRegistry implements Countable
     /**
      * @throws UnknownDirective
      */
-    public function assertKnown(string $name, DirectiveType $type): void
+    public function assertKnown(?string $name, DirectiveType $type): void
     {
-        if ($this->isEmpty() || $this->has($name, $type)) {
+        // A directive written without a name is the RFC's container that falls back to a div,
+        // and a registry lists names: there is none here to be missing. The rule lives here
+        // rather than at the call site so that it cannot be left out of the one parser that
+        // can meet one.
+        if ($name === null || $this->isEmpty() || $this->has($name, $type)) {
             return;
         }
 

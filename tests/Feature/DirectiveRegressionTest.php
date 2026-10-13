@@ -76,7 +76,7 @@ describe('nesting depth', function () {
         $document = parse(":::a\n:::b\n:::c\nx\n:::\n:::\n:::");
 
         $names = array_map(
-            static fn (DirectiveBlock|DirectiveInline $node): string => $node->getName(),
+            static fn (DirectiveBlock|DirectiveInline $node): ?string => $node->getName(),
             directives($document)
         );
 
