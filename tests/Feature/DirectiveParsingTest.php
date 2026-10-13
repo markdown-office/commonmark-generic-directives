@@ -262,6 +262,22 @@ describe('what is deliberately not a directive', function () {
         expect(render('See status:error for details.'))->not->toContain('data-directive');
     });
 
+    it('leaves a fence tail in a paragraph alone', function () {
+        // A leaf or container fence that lost its opening line leaves its tail behind, and
+        // the second colon of that tail is the only position left that could start a text
+        // directive. The pattern refuses the first of the pair, so the guard has to refuse
+        // the second — which is the character immediately before, not one further back.
+        expect(render('text x::badge[y] more'))->not->toContain('data-directive')
+            ->and(render('text :::badge[y] more'))->not->toContain('data-directive');
+    });
+
+    it('takes a directive after a colon in prose, because a colon before a space is not a fence', function () {
+        // The other side of the same guard. `Note: :badge[x]` is the same shape as the URL and
+        // the `status:error` above, and refusing it would be refusing the author's prose over
+        // a two-character difference from the fence tail it does refuse.
+        expect(render('Note: :badge[x]'))->toContain('data-directive="badge"');
+    });
+
     it('leaves a URL alone', function () {
         expect(render('See https://example.test/a/b for more.'))->not->toContain('data-directive');
     });
