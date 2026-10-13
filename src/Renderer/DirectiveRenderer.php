@@ -49,8 +49,15 @@ final class DirectiveRenderer implements NodeRendererInterface
         }
 
         // First, so that it reads as the element's identity rather than as one more
-        // attribute. The loop below skips it, which is what keeps it first *and* first.
-        $element = ['data-directive' => $node->getName()];
+        // attribute. The loop below skips it, which is what keeps it first *and* first. A
+        // container written without a name gets no key rather than an empty one; the key
+        // stays reserved either way, so an author attribute still cannot invent a name for
+        // an element that has none.
+        $element = [];
+
+        if ($node->getName() !== null) {
+            $element['data-directive'] = $node->getName();
+        }
 
         foreach ($node->getAttributes() as $name => $value) {
             $key = \str_starts_with($name, 'data-') ? $name : 'data-' . $name;

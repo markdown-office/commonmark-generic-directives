@@ -17,13 +17,17 @@ use Stringable;
  * every consumer branches on the class instead of reading one property.
  *
  * A leaf has no block children; a container holds whatever Markdown its fence encloses.
+ *
+ * The name is null for a container written without one, which the RFC has fall back to a
+ * div — `::: {.myClass}`. It is null rather than the string `div`, because the div is the
+ * element the RFC falls back to and not a directive the document named.
  */
 final class DirectiveBlock extends AbstractBlock implements Stringable
 {
     private readonly DirectiveAttributes $attributes;
 
     public function __construct(
-        private readonly string $name,
+        private readonly ?string $name,
         private readonly DirectiveType $type,
         ?DirectiveAttributes $attributes = null,
         private readonly ?string $label = null,
@@ -63,7 +67,10 @@ final class DirectiveBlock extends AbstractBlock implements Stringable
         return $this->openNested > 0;
     }
 
-    public function getName(): string
+    /**
+     * The directive's name, or null when it was written without one.
+     */
+    public function getName(): ?string
     {
         return $this->name;
     }
@@ -81,8 +88,9 @@ final class DirectiveBlock extends AbstractBlock implements Stringable
     /**
      * The text between `[` and `]`, if any.
      *
-     * Leaf directives take one; containers do not, since their body is Markdown and
-     * belongs in the children.
+     * Both shapes take one — the RFC's container syntax has an `[inline-content]` — but a
+     * container's own Markdown belongs in its children, so a label on one is a title the
+     * author wrote rather than something to render in place of a body.
      */
     public function getLabel(): ?string
     {
@@ -95,16 +103,16 @@ final class DirectiveBlock extends AbstractBlock implements Stringable
     }
 
     /**
- * Back to source form, so a document can be rewritten without losing the directive.
- *
- * The body's own fence length is not reproduced. A container written with four colons
- * closes with three in practice, and `:::name` is the form a reader is meant to
- * recognise.
- */
-public function __toString(): string
-{
+     * Back to source form, so a document can be rewritten without losing the directive.
+     *
+     * Neither the fence length nor the RFC's non-significant trailing colons are
+     * reproduced. A container written with four colons closes with three in practice, and
+     * `:::name` is the form a reader is meant to recognise.
+     */
+    public function __toString(): string
+    {
     $label = $this->label === null || $this->label === '' ? '' : '[' . $this->label . ']';
 
-    return \str_repeat(':', $this->type->minimumColons()) . $this->name . $label . $this->attributes;
-}
+        return \str_repeat(':', $this->type->minimumColons()) . $this->name . $label . $this->attributes;
+    }
 }

@@ -48,8 +48,11 @@ final class DirectiveInlineParser implements InlineParserInterface
         }
 
         // The tail of a leaf or container fence that leaked into a paragraph is not a text
-        // directive; `::` belongs to the block parser.
-        if ($cursor->peek(-2) === ':') {
+        // directive; `::` belongs to the block parser. `(?!\:)` in `INLINE_BODY` has already
+        // refused the first colon of a pair, so this has to refuse the second — and the cursor
+        // sits on the colon being matched, which is what `peek(-1)` reads. One further back is
+        // the colon before a space, which refused `Note: :badge[x]`: prose, on its way in.
+        if ($cursor->peek(-1) === ':') {
             return false;
         }
 

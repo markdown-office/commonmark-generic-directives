@@ -77,6 +77,13 @@ describe('rejecting an unknown name', function () {
             ->not->toThrow(UnknownDirective::class);
     });
 
+    it('accepts a directive with no name, because there is no name to be missing', function () {
+        // A registry lists names, and `::: {.myClass}` has none to be missing from it.
+        // Raising here would make the RFC's nameless container unusable in strict mode.
+        expect(fn () => (new DirectiveRegistry(['col']))->assertKnown(null, DirectiveType::Container))
+            ->not->toThrow(UnknownDirective::class);
+    });
+
     it('describes an every-shape name without a suffix', function () {
         expect((new DirectiveRegistry(['col', 'note:text']))->describe())
             ->toBe(['col', 'note:text']);

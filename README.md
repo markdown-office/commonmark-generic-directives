@@ -45,9 +45,9 @@ $environment->addExtension(new GenericDirectiveExtension());
 $html = (new MarkdownConverter($environment))->convert($markdown);
 ```
 
-The default renderer preserves everything rather than choosing for you: the element name
-carries the directive, and every attribute is reproduced. What a directive *means* is
-yours to decide — register your own renderer over it.
+The default renderer preserves everything rather than choosing for you: the element carries
+the directive's name, and every attribute is reproduced. What a directive *means* is yours to
+decide — register your own renderer over it.
 
 ```html
 <span data-directive="badge" data-type="success">PRODUCTION</span>
@@ -109,6 +109,47 @@ Back in the outer one.
 <p>Back in the outer one.</p></div>
 ```
 
+The RFC lets the parts of a block directive be spaced out for readability — `:: name`,
+`:::eval [label] {.python}`. An inline directive does not get that: `: ` is how prose
+introduces a clause.
+
+A container may be written without a name, and then it is a div carrying the attributes that
+followed it.
+
+```markdown
+::: {.myClass}
+some markdown
+:::
+```
+
+```html
+<div data-class="myClass"><p>some markdown</p></div>
+```
+
+The opening line may also end in colons, which mean nothing — as long as something else is on
+the line, because `:::` on its own is how a container closes.
+
+```markdown
+:::::::::::: SPOILER ::::::::::::
+We're going to spoil it in three
+easy steps:
+
+1. ready
+2. steady
+3. go
+::::::::::::::::::::::::::::::::::
+```
+
+```html
+<div data-directive="SPOILER"><p>We're going to spoil it in three
+easy steps:</p>
+<ol>
+<li>ready</li>
+<li>steady</li>
+<li>go</li>
+</ol></div>
+```
+
 ## Attributes
 
 ```markdown
@@ -163,9 +204,9 @@ because a document cannot be asked to care about case.
 ## The AST
 
 ```php
-$node->getName();        // 'callout'
+$node->getName();        // 'callout', or null for a container written without one
 $node->getType();        // DirectiveType::Container | Leaf | Text
-$node->getLabel();       // 'Chart', or null — a container has none
+$node->getLabel();       // 'Chart', or null when there is none
 $node->getAttributes();  // DirectiveAttributes
 $node->isContainer();    // bool
 (string) $node;          // back to source form
@@ -216,9 +257,9 @@ composer test:feature  # parsing and rendering, end to end
 composer check         # validate, audit, static analysis, tests
 ```
 
-The suite is **100% covered** and analysed at **PHPStan level 9**. Every claim on this
-page is asserted by `tests/Readme/ExamplesTest.php`, so the two cannot drift apart
-without the build failing.
+The suite is **100% covered** and analysed at **PHPStan level 9**. Every example on this page
+is executed by `tests/Readme/ExamplesTest.php` and every claim in the prose by
+`tests/Readme/ClaimsTest.php`, so neither can drift from the code without the build failing.
 
 ## Licence
 
