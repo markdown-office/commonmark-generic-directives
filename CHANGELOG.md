@@ -4,7 +4,14 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.0] - 2026-10-13
+
+### Fixed
+
+- A fence tail that leaked into a paragraph became a text directive. The guard read the
+  character two positions back, which is the colon before a space, so `text x::badge[y] more`
+  parsed as a directive and `Note: :badge[x] more` did not. Both are now what they look like:
+  the tail is text, and the directive after a prose colon is a directive.
 
 ### Added
 
