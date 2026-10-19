@@ -102,6 +102,41 @@ describe('nesting depth', function () {
     });
 });
 
+describe('a container nested through another block', function () {
+    // A blockquote between the two is enough: the container that waits for the nested one
+    // is an ancestor rather than a parent, so anything that asks only for a parent leaves
+    // the count permanently one high and the outer fence is never honoured again.
+    $nested = ":::a\n> :::b\n> x\n> :::\n:::\nAFTER";
+
+    it('closes the outer one, which is what its own fence says to do', function () use ($nested) {
+        expect(trim(render($nested)))->toBe(
+            '<div data-directive="a"><blockquote>' . "\n"
+            . '<div data-directive="b"><p>x</p></div>' . "\n"
+            . '</blockquote></div>' . "\n"
+            . '<p>AFTER</p>'
+        );
+    });
+
+    it('leaves no container waiting for a child once parsing has finished', function () use ($nested) {
+        $outer = directive(parse($nested), 'a');
+
+        \assert($outer instanceof DirectiveBlock);
+
+        expect($outer->hasOpenNestedContainer())->toBeFalse()
+            ->and($outer->children())->toHaveCount(1);
+    });
+
+    it('counts and un-counts the same container at any depth', function () {
+        $deep = ":::a\n> > :::b\n> > x\n> > :::\n:::\nAFTER";
+        $outer = directive(parse($deep), 'a');
+
+        \assert($outer instanceof DirectiveBlock);
+
+        expect($outer->hasOpenNestedContainer())->toBeFalse()
+            ->and(trim(render($deep)))->toEndWith('<p>AFTER</p>');
+    });
+});
+
 describe('the shape of what was built', function () {
     it('gives a container block children and a leaf none', function () {
         $document = parse(":::a\nbody\n:::\n\n::b");

@@ -83,6 +83,17 @@ describe('writing a directive as HTML', function () {
         expect(trim(render('::a')))->toBe('<div data-directive="a"></div>');
     });
 
+    it('renders an attribute whose name is all digits, which PHP gave an int key', function () {
+        // `1` and `12` are legal attribute names here and come back out of the array as
+        // integers, so the loop over them has to be a string one or the render is a fatal.
+        expect(trim(render('::t{0=zero 12=twelve 1a=ok}')))
+            ->toBe('<div data-directive="t" data-0="zero" data-12="twelve" data-1a="ok"></div>');
+    });
+
+    it('does not renumber an attribute name that PHP gave an int key', function () {
+        expect(trim(render('::t{12=twelve}')))->toBe('<div data-directive="t" data-12="twelve"></div>');
+    });
+
     it('leaves the name off an element written without one', function () {
         expect(render("::: {.myClass}\nbody\n:::"))->toBe('<div data-class="myClass"><p>body</p></div>' . "\n");
     });

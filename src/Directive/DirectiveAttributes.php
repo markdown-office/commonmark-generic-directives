@@ -136,10 +136,15 @@ final class DirectiveAttributes implements Countable, IteratorAggregate, JsonSer
      * Needed because a directive can be written attributes in two places at once —
      * `:::note#lead.terse{title="x"}` — and a `.class` shorthand should add to a class
      * attribute rather than replace it.
+     *
+     * `array_replace()` rather than `array_merge()` because `array_merge()` renumbers
+     * integer keys. An attribute named `12` reached here as an integer — PHP casts a
+     * numeric-string key on the way in and no array keeps it a string — and renumbering
+     * would write it out under a name the author never wrote.
      */
     public function mergedWith(self $other): self
     {
-        $values = \array_merge($this->values, $other->values);
+        $values = \array_replace($this->values, $other->values);
 
         $thisClass = $this->values['class'] ?? null;
         $otherClass = $other->values['class'] ?? null;
@@ -210,10 +215,25 @@ final class DirectiveAttributes implements Countable, IteratorAggregate, JsonSer
 
             $pairs[] = $value === true
                 ? $name
-                : $name . '="' . \str_replace('"', '\\"', $value) . '"';
+                : $name . '=' . self::quoted($value);
         }
 
         return $pairs === [] ? '' : '{' . implode(' ', $pairs) . '}';
+    }
+
+    /**
+     * A value in a form {@see \MarkdownOffice\CommonMark\Directive\Directive\AttributeParser} reads back.
+     *
+     * The parser has no escape for a quote inside a quoted value, so the writer takes the
+     * quote the value does not contain rather than the one it would rather use. A value
+     * carrying both is the one thing the syntax cannot express and the one thing this
+     * round trip cannot preserve.
+     */
+    private static function quoted(string $value): string
+    {
+        $quote = \str_contains($value, '"') ? "'" : '"';
+
+        return $quote . $value . $quote;
     }
 
     /**

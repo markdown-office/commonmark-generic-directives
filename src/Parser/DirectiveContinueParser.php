@@ -80,10 +80,12 @@ final class DirectiveContinueParser extends AbstractBlockContinueParser
         }
 
         // Tell the container we were nested in that it has one fewer child to wait for,
-        // so its own closing fence is honoured again on the next line.
-        $parent = $this->block->parent();
+        // so its own closing fence is honoured again on the next line. The one we were
+        // nested in is the nearest ancestor that is a container, which is the one the
+        // start parser counted this container against.
+        $parent = DirectiveBlock::enclosing($this->block->parent());
 
-        if ($parent instanceof DirectiveBlock) {
+        if ($parent !== null) {
             $parent->closeNestedContainer();
         }
     }

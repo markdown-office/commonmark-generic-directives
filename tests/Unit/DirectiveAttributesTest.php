@@ -177,6 +177,16 @@ describe('carrying attributes', function () {
         expect(DirectiveAttributes::parse('.a')->mergedWith(DirectiveAttributes::parse('.b'))->getString('class'))
             ->toBe('a b');
     });
+
+    it('keeps an attribute name that PHP cast to an integer', function () {
+        // The merge is where the two spellings of a directive come together, so it is
+        // where a numeric name would be renumbered into one the author never wrote.
+        $merged = DirectiveAttributes::parse('12=twelve')->mergedWith(DirectiveAttributes::parse('3=three'));
+
+        expect(\array_keys($merged->toArray()))->toBe([12, 3])
+            ->and($merged->get('12'))->toBe('twelve')
+            ->and($merged->get('3'))->toBe('three');
+    });
 });
 
 describe('round-tripping to source', function () {
@@ -198,6 +208,24 @@ describe('round-tripping to source', function () {
 
     it('survives being parsed again', function () {
         $once = DirectiveAttributes::parse('#lead.a b=2');
+        $twice = DirectiveAttributes::parse(\substr((string) $once, 1, -1));
+
+        expect($twice->toArray())->toBe($once->toArray());
+    });
+
+    it('survives a value carrying the quote the writer would have preferred', function () {
+        // The single-quoted form is what the README offers for a value containing a double
+        // quote, so writing it back out has to pick the other quote rather than escape one
+        // the parser has no escape for.
+        $once = DirectiveAttributes::parse('title=\'a "b" c\'');
+        $twice = DirectiveAttributes::parse(\substr((string) $once, 1, -1));
+
+        expect((string) $once)->toBe('{title=\'a "b" c\'}')
+            ->and($twice->toArray())->toBe($once->toArray());
+    });
+
+    it('survives a value carrying the quote it was written with', function () {
+        $once = DirectiveAttributes::parse('title="it\'s here"');
         $twice = DirectiveAttributes::parse(\substr((string) $once, 1, -1));
 
         expect($twice->toArray())->toBe($once->toArray());
