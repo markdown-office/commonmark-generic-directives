@@ -60,6 +60,10 @@ final class DirectiveRenderer implements NodeRendererInterface
         }
 
         foreach ($node->getAttributes() as $name => $value) {
+            // A name that is all digits arrives as an int key: PHP cast it on the way into
+            // the array and no array keeps it a string. Naming it back is what lets the
+            // line below be a string operation rather than a `TypeError`.
+            $name = (string) $name;
             $key = \str_starts_with($name, 'data-') ? $name : 'data-' . $name;
 
             // An author attribute landing on the key above is dropped rather than

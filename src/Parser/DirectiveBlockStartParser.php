@@ -58,23 +58,10 @@ final class DirectiveBlockStartParser implements BlockStartParserInterface
         if ($type === DirectiveType::Container) {
             // CommonMark closes a container and everything above it together, so a parent
             // has to know it has a child to wait for before it honours its own fence.
-            $this->enclosingContainer($parserState)?->openNestedContainer();
+            DirectiveBlock::enclosing($parserState->getActiveBlockParser()->getBlock())
+                ?->openNestedContainer();
         }
 
         return BlockStart::of(new DirectiveContinueParser($block, $colons))->at($cursor);
-    }
-
-    /**
-     * The nearest directive container this block is being parsed inside, if any.
-     */
-    private function enclosingContainer(MarkdownParserStateInterface $parserState): ?DirectiveBlock
-    {
-        for ($node = $parserState->getActiveBlockParser()->getBlock(); $node !== null; $node = $node->parent()) {
-            if ($node instanceof DirectiveBlock) {
-                return $node;
-            }
-        }
-
-        return null;
     }
 }

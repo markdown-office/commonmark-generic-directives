@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MarkdownOffice\CommonMark\Directive\Node;
 
 use League\CommonMark\Node\Block\AbstractBlock;
+use League\CommonMark\Node\Node;
 use MarkdownOffice\CommonMark\Directive\Directive\DirectiveAttributes;
 use MarkdownOffice\CommonMark\Directive\DirectiveType;
 use Stringable;
@@ -65,6 +66,26 @@ final class DirectiveBlock extends AbstractBlock implements Stringable
     public function hasOpenNestedContainer(): bool
     {
         return $this->openNested > 0;
+    }
+
+    /**
+     * The nearest directive container at or above `$node`, or null when there is none.
+     *
+     * The two ends of a nested container have to agree on which container that is: the one
+     * that counts a child and the one that stops waiting for it. A nested container is not
+     * always a *direct* child of the container it counts — a blockquote or a list item can
+     * sit between the two — and the fence that has to be honoured belongs to the outermost,
+     * so both ends walk rather than one of them asking for a parent.
+     */
+    public static function enclosing(Node $node): ?self
+    {
+        for (; $node !== null; $node = $node->parent()) {
+            if ($node instanceof self) {
+                return $node;
+            }
+        }
+
+        return null;
     }
 
     /**

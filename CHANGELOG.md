@@ -4,6 +4,22 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- A container nested inside another one through a blockquote could not be closed. The
+  nested container counted itself against the outermost directive container, but told
+  only its own parent when it closed, so the count stayed one high and the outer fence
+  was never honoured again — the rest of the document was swallowed as its body.
+- An attribute whose name is all digits was renamed. PHP casts a numeric-string array
+  key to an integer, and `mergedWith()` merged with `array_merge()`, which renumbers
+  those: `{12=twelve}` came back out as `data-0="twelve"`. Where the integer key then
+  reached the renderer it was a fatal `TypeError` rather than an attribute.
+- `__toString()` no longer writes a `\"` the parser cannot read back. A value holding a
+  double quote came out as `a \` plus an extra `hi` attribute; the writer now picks the
+  quote the value does not contain, which is the form the README documents for it.
+
 ## [0.2.0] - 2026-10-13
 
 ### Fixed
