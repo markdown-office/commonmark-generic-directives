@@ -8,6 +8,7 @@ use League\CommonMark\MarkdownConverter;
 use League\CommonMark\Node\Block\Document;
 use League\CommonMark\Node\Inline\Text;
 use League\CommonMark\Parser\MarkdownParser;
+use MarkdownOffice\CommonMark\Directive\AttributeNaming;
 use MarkdownOffice\CommonMark\Directive\Directive\DirectiveRegistry;
 use MarkdownOffice\CommonMark\Directive\Directive\DirectiveSyntax;
 use MarkdownOffice\CommonMark\Directive\GenericDirectiveExtension;
@@ -22,18 +23,18 @@ use MarkdownOffice\CommonMark\Directive\Tests\Support\BrokenFixture;
  * that fails does so because of this package rather than because of what else happened to
  * be installed.
  */
-function environment(?DirectiveRegistry $registry = null): Environment
+function environment(?DirectiveRegistry $registry = null, AttributeNaming $naming = AttributeNaming::Namespaced): Environment
 {
     $environment = new Environment();
     $environment->addExtension(new CommonMarkCoreExtension());
-    $environment->addExtension(new GenericDirectiveExtension($registry));
+    $environment->addExtension(new GenericDirectiveExtension($registry, $naming));
 
     return $environment;
 }
 
-function render(string $markdown, ?DirectiveRegistry $registry = null): string
+function render(string $markdown, ?DirectiveRegistry $registry = null, AttributeNaming $naming = AttributeNaming::Namespaced): string
 {
-    return (string) (new MarkdownConverter(environment($registry)))->convert($markdown);
+    return (string) (new MarkdownConverter(environment($registry, $naming)))->convert($markdown);
 }
 
 /**

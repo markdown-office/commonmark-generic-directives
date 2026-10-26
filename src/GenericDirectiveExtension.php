@@ -34,8 +34,10 @@ use MarkdownOffice\CommonMark\Directive\Renderer\DirectiveRenderer;
  */
 final class GenericDirectiveExtension implements ExtensionInterface
 {
-    public function __construct(private readonly ?DirectiveRegistry $registry = null)
-    {
+    public function __construct(
+        private readonly ?DirectiveRegistry $registry = null,
+        private readonly AttributeNaming $naming = AttributeNaming::Namespaced,
+    ) {
     }
 
     public function register(EnvironmentBuilderInterface $environment): void
@@ -48,7 +50,7 @@ final class GenericDirectiveExtension implements ExtensionInterface
         $environment->addBlockStartParser(new DirectiveBlockStartParser($this->registry));
         $environment->addInlineParser(new DirectiveInlineParser($this->registry));
 
-        $renderer = new DirectiveRenderer();
+        $renderer = new DirectiveRenderer($this->naming);
         $environment->addRenderer(DirectiveBlock::class, $renderer);
         $environment->addRenderer(DirectiveInline::class, $renderer);
     }

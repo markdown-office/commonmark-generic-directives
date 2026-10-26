@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use MarkdownOffice\CommonMark\Directive\AttributeNaming;
 use MarkdownOffice\CommonMark\Directive\Directive\DirectiveAttributes;
 use MarkdownOffice\CommonMark\Directive\Directive\DirectiveRegistry;
 use MarkdownOffice\CommonMark\Directive\DirectiveType;
@@ -191,9 +192,20 @@ describe('the things the README says are not directives', function () {
     });
 });
 
-describe('the HTML claims the README makes', function () {
+describe('the HTML claims the README makes', function () use ($readme) {
     it('namespaces author attributes', function () {
         expect(render('A :t{onclick="x()"} b'))->toContain('data-onclick="x()"');
+    });
+
+    it('writes them as the author wrote them when the naming says so', function () use ($readme) {
+        // The page shows the output rather than a Markdown/HTML pair, because the pair
+        // would be rendered with the default naming and claim the wrong thing. The claim
+        // is the HTML on the page, so the page is checked against it here.
+        $html = '<p>A <span data-directive="badge" type="success">X</span> b</p>';
+
+        expect(render('A :badge[X]{type=success onclick="steal()"} b', null, AttributeNaming::AsWritten))
+            ->toBe($html . "\n")
+            ->and((string) file_get_contents($readme))->toContain($html);
     });
 
     it('drops an attribute that would land on data-directive', function () {

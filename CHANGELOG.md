@@ -6,6 +6,14 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The `data-` namespace is an option. `AttributeNaming::AsWritten` writes an author's
+  attributes under the names they gave them — `type="info"` rather than
+  `data-type="info"` — which is what the official Attributes extension writes for the same
+  syntax. An attribute whose name starts with `on` is dropped rather than written, as it
+  is there. The namespace is still the default.
+
 ### Fixed
 
 - A container nested inside another one through a blockquote could not be closed. The

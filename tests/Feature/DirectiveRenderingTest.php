@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use MarkdownOffice\CommonMark\Directive\AttributeNaming;
 use MarkdownOffice\CommonMark\Directive\Directive\DirectiveRegistry;
 use MarkdownOffice\CommonMark\Directive\Exception\UnknownDirective;
 use MarkdownOffice\CommonMark\Directive\Node\DirectiveBlock;
@@ -121,6 +122,55 @@ describe('writing a directive as HTML', function () {
 
         expect((string) (new MarkdownConverter($environment))->convert(":::a\nx\n:::"))
             ->toBe('<aside><p>x</p></aside>' . "\n");
+    });
+});
+
+describe('writing the attributes as the author wrote them', function () {
+    it('writes them under the name the author gave them', function () {
+        expect(trim(render('::t{type=info n=2 flag}', null, AttributeNaming::AsWritten)))
+            ->toBe('<div data-directive="t" type="info" n="2" flag></div>');
+    });
+
+    it('writes the id and class shorthands as id and class', function () {
+        // The same names the official Attributes extension writes them under, so a
+        // document that uses both means the same thing in both.
+        expect(trim(render('::t{#lead .terse}', null, AttributeNaming::AsWritten)))
+            ->toBe('<div data-directive="t" id="lead" class="terse"></div>');
+    });
+
+    it('keeps the directive name where it is', function () {
+        // The name says what the element is, and the author said nothing about it.
+        expect(render('::t{type=info}', null, AttributeNaming::AsWritten))
+            ->toContain('data-directive="t"');
+    });
+
+    it('refuses an event handler, as the official Attributes extension does', function () {
+        // The name starts with `on`, and an attribute with that prefix is a script the
+        // moment it lands on a page that runs scripts.
+        expect(trim(render('::t{onclick="steal()"}', null, AttributeNaming::AsWritten)))
+            ->toBe('<div data-directive="t"></div>');
+    });
+
+    it('refuses an event handler whatever its case', function () {
+        expect(trim(render('::t{ONCLICK="steal()"}', null, AttributeNaming::AsWritten)))
+            ->toBe('<div data-directive="t"></div>');
+    });
+
+    it('refuses an attribute that merely starts with the letters of on', function () {
+        // The rule is a prefix rather than a list of event names, so `only` goes with
+        // `onclick`. The official Attributes extension refuses it too.
+        expect(trim(render('::t{only=1}', null, AttributeNaming::AsWritten)))
+            ->toBe('<div data-directive="t"></div>');
+    });
+
+    it('keeps the reserved key reserved', function () {
+        expect(trim(render('::a{data-directive="b"}', null, AttributeNaming::AsWritten)))
+            ->toBe('<div data-directive="a"></div>');
+    });
+
+    it('writes nothing into the data- namespace', function () {
+        expect(render('::t{type=info}', null, AttributeNaming::AsWritten))
+            ->not->toContain('data-type');
     });
 });
 

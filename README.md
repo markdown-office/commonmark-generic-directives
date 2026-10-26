@@ -248,6 +248,34 @@ is only ever correct until someone invents an event. Namespacing needs no list t
 that would land on it is dropped rather than renamed. A consumer that wants real
 attributes reads the node rather than this markup.
 
+### The namespace is an option
+
+The same syntax means the same thing in the [official Attributes
+extension](https://commonmark.thephpleague.com/2.x/extensions/attributes/), so a document
+that uses both should not have to mean two things:
+
+```php
+use MarkdownOffice\CommonMark\Directive\AttributeNaming;
+
+$environment->addExtension(new GenericDirectiveExtension(
+    naming: AttributeNaming::AsWritten,
+));
+```
+
+The same document then renders as:
+
+```html
+<p>A <span data-directive="badge" type="success">X</span> b</p>
+```
+
+`onclick` is dropped rather than written, which is what that extension does with it: an
+attribute whose name starts with `on` is an event handler, and a page that runs scripts
+would run it. The rule is a prefix rather than a list of names, so `only` goes with it
+too.
+
+`data-directive` stays where it is. The name says what the element is, and the author
+said nothing about it.
+
 ## Tests
 
 ```bash
