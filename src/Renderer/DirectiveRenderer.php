@@ -9,6 +9,7 @@ use League\CommonMark\Renderer\ChildNodeRendererInterface;
 use League\CommonMark\Renderer\NodeRendererInterface;
 use League\CommonMark\Util\HtmlElement;
 use League\CommonMark\Util\Xml;
+use MarkdownOffice\CommonMark\Directive\AttributeNaming;
 use MarkdownOffice\CommonMark\Directive\Node\DirectiveBlock;
 use MarkdownOffice\CommonMark\Directive\Node\DirectiveInline;
 
@@ -21,14 +22,15 @@ use MarkdownOffice\CommonMark\Directive\Node\DirectiveInline;
  * business — a consumer that wants `<aside class="callout">` registers its own renderer
  * over this one rather than asking this one to guess.
  *
- * Author attributes are written into the `data-` namespace. That is not tidiness: an
- * attribute named `onclick` written into a page that later runs scripts is a script, and
- * deciding which names are dangerous by keeping a list means the list is only ever
- * correct until someone invents an event. Namespacing needs no list to maintain. A
- * consumer that wants real attributes reads the node rather than this markup.
+ * Where an author's attributes land is {@see AttributeNaming}'s business: the names the
+ * author wrote by default, or the `data-` namespace.
  */
 final class DirectiveRenderer implements NodeRendererInterface
 {
+    public function __construct(private readonly AttributeNaming $naming = AttributeNaming::AsWritten)
+    {
+    }
+
     /**
      * @param DirectiveBlock|DirectiveInline $node
      *
@@ -62,9 +64,14 @@ final class DirectiveRenderer implements NodeRendererInterface
         foreach ($node->getAttributes() as $name => $value) {
             // A name that is all digits arrives as an int key: PHP cast it on the way into
             // the array and no array keeps it a string. Naming it back is what lets the
-            // line below be a string operation rather than a `TypeError`.
+            // lines below be string operations rather than a `TypeError`.
             $name = (string) $name;
-            $key = \str_starts_with($name, 'data-') ? $name : 'data-' . $name;
+
+            if (!$this->naming->allows($name)) {
+                continue;
+            }
+
+            $key = $this->naming->attributeName($name);
 
             // An author attribute landing on the key above is dropped rather than
             // renamed: a second attribute differing only by one `data-` would mean

@@ -2,12 +2,14 @@
 
 declare(strict_types=1);
 
+use MarkdownOffice\CommonMark\Directive\AttributeNaming;
 use MarkdownOffice\CommonMark\Directive\Directive\DirectiveAttributes;
 use MarkdownOffice\CommonMark\Directive\Directive\DirectiveRegistry;
 use MarkdownOffice\CommonMark\Directive\DirectiveType;
 use MarkdownOffice\CommonMark\Directive\Exception\UnknownDirective;
 use MarkdownOffice\CommonMark\Directive\Node\DirectiveBlock;
 use MarkdownOffice\CommonMark\Directive\Node\DirectiveInline;
+use MarkdownOffice\CommonMark\Directive\Tests\Support\BrokenFixture;
 use MarkdownOffice\CommonMark\Directive\Tests\Support\Readme;
 
 /** The page every claim here is checked against. */
@@ -166,7 +168,7 @@ describe('the tolerances the README says a block directive has', function () {
     });
 
     it('has a container written without a name as a div with no name on it', function () {
-        expect(render("::: {.myClass}\nbody\n:::"))->toBe('<div data-class="myClass"><p>body</p></div>' . "\n");
+        expect(render("::: {.myClass}\nbody\n:::"))->toBe('<div class="myClass"><p>body</p></div>' . "\n");
     });
 
     it('ignores colons at the end of the opening line, but not a line of them alone', function () {
@@ -192,8 +194,12 @@ describe('the things the README says are not directives', function () {
 });
 
 describe('the HTML claims the README makes', function () {
-    it('namespaces author attributes', function () {
-        expect(render('A :t{onclick="x()"} b'))->toContain('data-onclick="x()"');
+    it('writes the attributes under the name the author gave them', function () {
+        expect(render('A :t{type=info} b'))->toContain('type="info"');
+    });
+
+    it('refuses an event handler, so it cannot become a script', function () {
+        expect(render('A :t{onclick="x()"} b'))->not->toContain('onclick');
     });
 
     it('drops an attribute that would land on data-directive', function () {
@@ -217,7 +223,35 @@ describe('the gates the README quotes', function () use ($readme) {
 
 describe('the README extractor', function () use ($readme) {
     it('finds the paired examples it claims to find', function () use ($readme) {
-        expect(Readme::examples($readme))->toHaveCount(5);
+        expect(Readme::examples($readme))->toHaveCount(6);
+    });
+
+    it('reads the naming a fence asks for', function () {
+        $path = \tempnam(\sys_get_temp_dir(), 'readme') . '.md';
+        \file_put_contents($path, "```markdown namespaced\n:t[x]\n```\n\n```html\n<p>x</p>\n```\n");
+
+        expect(Readme::examples($path)[0]['naming'])->toBe(AttributeNaming::Namespaced);
+
+        @\unlink($path);
+    });
+
+    it('reads a fence that names nothing as the default naming', function () {
+        $path = \tempnam(\sys_get_temp_dir(), 'readme') . '.md';
+        \file_put_contents($path, "```markdown\n:t[x]\n```\n\n```html\n<p>x</p>\n```\n");
+
+        expect(Readme::examples($path)[0]['naming'])->toBe(AttributeNaming::AsWritten);
+
+        @\unlink($path);
+    });
+
+    it('refuses a fence that names something nobody knows', function () {
+        // Otherwise the page would show an example that nothing checks.
+        $path = \tempnam(\sys_get_temp_dir(), 'readme') . '.md';
+        \file_put_contents($path, "```markdown nonsense\n:t[x]\n```\n");
+
+        expect(fn () => Readme::examples($path))->toThrow(BrokenFixture::class);
+
+        @\unlink($path);
     });
 
     it('ignores a markdown block with no html block after it', function () {

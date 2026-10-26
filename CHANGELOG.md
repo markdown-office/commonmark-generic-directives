@@ -6,6 +6,21 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **The default renderer writes an author's attributes under the names the author gave
+  them.** `{type=info}` is now `type="info"` rather than `data-type="info"`, and
+  `{#lead .terse}` is `id="lead" class="terse"`. This is what the official Attributes
+  extension writes for the same syntax, so a document that uses both means the same
+  thing in both. An attribute whose name starts with `on` is dropped rather than
+  written, as that extension does it, and so is one whose name HTML does not accept.
+  The `data-` namespace is still there: `AttributeNaming::Namespaced` asks for it.
+
+### Added
+
+- `AttributeNaming` — where an author's attributes land in the HTML the default renderer
+  writes. `AsWritten` is the default; `Namespaced` is the `data-` namespace.
+
 ### Fixed
 
 - A container nested inside another one through a blockquote could not be closed. The

@@ -109,12 +109,12 @@ describe('a container with no name', function () {
 
     it('parses its body as Markdown, because it is a container like any other', function () {
         expect(render("::: {.myClass}\nsome **markdown**\n:::"))
-            ->toBe('<div data-class="myClass"><p>some <strong>markdown</strong></p></div>' . "\n");
+            ->toBe('<div class="myClass"><p>some <strong>markdown</strong></p></div>' . "\n");
     });
 
     it('is not something a registry can be missing a name for', function () {
         expect(render("::: {.myClass}\nbody\n:::", new DirectiveRegistry(['col'])))
-            ->toBe('<div data-class="myClass"><p>body</p></div>' . "\n");
+            ->toBe('<div class="myClass"><p>body</p></div>' . "\n");
     });
 
     it('closes on a bare :::, the line it would have opened had it a name', function () {
@@ -161,7 +161,7 @@ describe('colons at the end of the opening line', function () {
 
     it('may be written after the attributes rather than after the name', function () {
         expect(trim(render(":::note{type=info}:::\nbody\n:::")))
-            ->toBe('<div data-directive="note" data-type="info"><p>body</p></div>');
+            ->toBe('<div data-directive="note" type="info"><p>body</p></div>');
     });
 });
 
@@ -181,7 +181,7 @@ describe('a leaf directive', function () {
         $html = render("::image{src=\"a.png\"}\nafter");
 
         expect(trim($html))->toBe(
-            '<div data-directive="image" data-src="a.png"></div>' . "\n" . '<p>after</p>'
+            '<div data-directive="image" src="a.png"></div>' . "\n" . '<p>after</p>'
         );
     });
 
