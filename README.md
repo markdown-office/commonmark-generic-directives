@@ -17,9 +17,9 @@ Runs on shared hosting.
 ```
 
 ```html
-<p>Ship it <span data-directive="badge" data-type="success">PRODUCTION</span> today.</p>
-<div data-directive="image" data-src="chart.png" data-width="400"></div>
-<div data-directive="callout" data-type="info" data-title="Hosting Advantage"><p>Runs on shared hosting.</p></div>
+<p>Ship it <span data-directive="badge" type="success">PRODUCTION</span> today.</p>
+<div data-directive="image" src="chart.png" width="400"></div>
+<div data-directive="callout" type="info" title="Hosting Advantage"><p>Runs on shared hosting.</p></div>
 ```
 
 ## Installation
@@ -45,12 +45,12 @@ $environment->addExtension(new GenericDirectiveExtension());
 $html = (new MarkdownConverter($environment))->convert($markdown);
 ```
 
-The default renderer preserves everything rather than choosing for you: the element carries
-the directive's name, and every attribute is reproduced. What a directive *means* is yours to
-decide — register your own renderer over it.
+The default renderer reproduces rather than chooses: the element carries the directive's
+name, and the attributes are written under the names their author gave them. What a
+directive *means* is yours to decide — register your own renderer over it.
 
 ```html
-<span data-directive="badge" data-type="success">PRODUCTION</span>
+<span data-directive="badge" type="success">PRODUCTION</span>
 ```
 
 The container above is checked against the opening example; see
@@ -105,7 +105,7 @@ Back in the outer one.
 ```
 
 ```html
-<div data-directive="col" data-width="50%"><div data-directive="note"><p>Nested containers keep their own fences.</p></div>
+<div data-directive="col" width="50%"><div data-directive="note"><p>Nested containers keep their own fences.</p></div>
 <p>Back in the outer one.</p></div>
 ```
 
@@ -123,7 +123,7 @@ some markdown
 ```
 
 ```html
-<div data-class="myClass"><p>some markdown</p></div>
+<div class="myClass"><p>some markdown</p></div>
 ```
 
 The opening line may also end in colons, which mean nothing — as long as something else is on
@@ -228,11 +228,45 @@ That last one is structural rather than a rule this package applies: CommonMark 
 look for new block starts inside a block that is not a container, so a `:::` inside a
 fence is code before this extension is consulted.
 
-## The default renderer's HTML is namespaced
+## Where an author's attributes land
 
-Author attributes are written into the `data-` namespace:
+They are written under the names the author gave them:
 
 ```markdown
+A :badge[X]{type=success onclick="steal()"} b
+```
+
+```html
+<p>A <span data-directive="badge" type="success">X</span> b</p>
+```
+
+That is what the [official Attributes
+extension](https://commonmark.thephpleague.com/2.x/extensions/attributes/) writes for the
+same syntax, so a document that uses both means the same thing in both.
+
+An event handler is dropped rather than written: an attribute whose name starts with `on`
+is a script the moment it lands on a page that runs scripts. The rule is a prefix rather
+than a list of names, so `only` goes with it too. So is an attribute whose name HTML does
+not accept: `12` is not a name a browser reads as an attribute.
+
+`data-directive` is reserved and carries the directive's real name; an author attribute
+that would land on it is dropped rather than renamed. A consumer that wants real
+attributes reads the node rather than this markup.
+
+### The namespace is an option
+
+A document whose author is not trusted has a reason to want an author's attributes kept
+out of the page's own names:
+
+```php
+use MarkdownOffice\CommonMark\Directive\AttributeNaming;
+
+$environment->addExtension(new GenericDirectiveExtension(
+    naming: AttributeNaming::Namespaced,
+));
+```
+
+```markdown namespaced
 A :badge[X]{type=success onclick="steal()"} b
 ```
 
@@ -242,39 +276,8 @@ A :badge[X]{type=success onclick="steal()"} b
 
 That is not tidiness. An `onclick` written into a page that later runs scripts *is* a
 script, and deciding which attribute names are dangerous by keeping a list means the list
-is only ever correct until someone invents an event. Namespacing needs no list to maintain.
-
-`data-directive` is reserved and carries the directive's real name; an author attribute
-that would land on it is dropped rather than renamed. A consumer that wants real
-attributes reads the node rather than this markup.
-
-### The namespace is an option
-
-The same syntax means the same thing in the [official Attributes
-extension](https://commonmark.thephpleague.com/2.x/extensions/attributes/), so a document
-that uses both should not have to mean two things:
-
-```php
-use MarkdownOffice\CommonMark\Directive\AttributeNaming;
-
-$environment->addExtension(new GenericDirectiveExtension(
-    naming: AttributeNaming::AsWritten,
-));
-```
-
-The same document then renders as:
-
-```html
-<p>A <span data-directive="badge" type="success">X</span> b</p>
-```
-
-`onclick` is dropped rather than written, which is what that extension does with it: an
-attribute whose name starts with `on` is an event handler, and a page that runs scripts
-would run it. The rule is a prefix rather than a list of names, so `only` goes with it
-too.
-
-`data-directive` stays where it is. The name says what the element is, and the author
-said nothing about it.
+is only ever correct until someone invents an event. Namespacing needs no list to
+maintain.
 
 ## Tests
 

@@ -23,7 +23,7 @@ use MarkdownOffice\CommonMark\Directive\Tests\Support\BrokenFixture;
  * that fails does so because of this package rather than because of what else happened to
  * be installed.
  */
-function environment(?DirectiveRegistry $registry = null, AttributeNaming $naming = AttributeNaming::Namespaced): Environment
+function environment(?DirectiveRegistry $registry = null, AttributeNaming $naming = AttributeNaming::AsWritten): Environment
 {
     $environment = new Environment();
     $environment->addExtension(new CommonMarkCoreExtension());
@@ -32,7 +32,7 @@ function environment(?DirectiveRegistry $registry = null, AttributeNaming $namin
     return $environment;
 }
 
-function render(string $markdown, ?DirectiveRegistry $registry = null, AttributeNaming $naming = AttributeNaming::Namespaced): string
+function render(string $markdown, ?DirectiveRegistry $registry = null, AttributeNaming $naming = AttributeNaming::AsWritten): string
 {
     return (string) (new MarkdownConverter(environment($registry, $naming)))->convert($markdown);
 }
@@ -155,16 +155,23 @@ function repoPath(string $file): string
  * that broke. This spends the line on the test name instead, which is where it is worth
  * having: a red row then says which line of README.md to go and look at.
  *
- * @param list<array{markdown: string, html: string, line: int}> $examples
+ * The naming comes along because an example may claim the output of a naming that is
+ * not the default one.
  *
- * @return array<string, array{0: string, 1: string}>
+ * @param list<array{markdown: string, html: string, line: int, naming: AttributeNaming}> $examples
+ *
+ * @return array<string, array<string, string|AttributeNaming>>
  */
 function pageDataset(string $page, array $examples): array
 {
     $rows = [];
 
     foreach ($examples as $example) {
-        $rows[\basename($page) . ':' . $example['line']] = [$example['markdown'], $example['html']];
+        $rows[\basename($page) . ':' . $example['line']] = [
+            'markdown' => $example['markdown'],
+            'html' => $example['html'],
+            'naming' => $example['naming'],
+        ];
     }
 
     return $rows;

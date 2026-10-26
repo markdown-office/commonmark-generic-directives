@@ -44,7 +44,7 @@ describe('a container does eat the lines it should', function () {
     });
 
     it('takes a nested leaf', function () {
-        expect(render(":::a\n::b{x=1}\n:::"))->toContain('<div data-directive="b" data-x="1">');
+        expect(render(":::a\n::b{x=1}\n:::"))->toContain('<div data-directive="b" x="1">');
     });
 
     it('takes a fenced code block verbatim', function () {

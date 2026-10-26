@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace MarkdownOffice\CommonMark\Directive\Tests\Support;
 
+use MarkdownOffice\CommonMark\Directive\AttributeNaming;
+
 /**
  * Pulls the worked examples out of README.md.
  *
@@ -12,6 +14,14 @@ namespace MarkdownOffice\CommonMark\Directive\Tests\Support;
  * an example that stops being true fails the build rather than misleading the next
  * reader.
  *
+ * The Markdown fence may name the attribute naming the claim is made under:
+ *
+ * ```markdown namespaced
+ * ```
+ *
+ * A fence without a name is the default naming, which is what the extension does when
+ * nothing says otherwise.
+ *
  * The alternative — transcribing each example into a test by hand — is how the claim and
  * the code drift apart in the first place, because the test keeps passing when the page
  * changes. That is a failure this file exists to make impossible.
@@ -19,7 +29,7 @@ namespace MarkdownOffice\CommonMark\Directive\Tests\Support;
 final class Readme
 {
     /**
-     * @return list<array{markdown: string, html: string, line: int}>
+     * @return list<array{markdown: string, html: string, line: int, naming: AttributeNaming}>
      */
     public static function examples(string $path): array
     {
@@ -32,12 +42,14 @@ final class Readme
         $examples = [];
         $markdown = null;
         $markdownLine = 0;
+        $naming = AttributeNaming::AsWritten;
 
         foreach ($lines as $number => $line) {
             if ($markdown === null) {
                 if (\str_starts_with(\trim($line), '```markdown')) {
                     $markdown = [];
                     $markdownLine = $number + 1;
+                    $naming = self::naming($line);
                 }
 
                 continue;
@@ -52,6 +64,7 @@ final class Readme
                         'markdown' => \implode("\n", $markdown),
                         'html' => $expected,
                         'line' => $markdownLine,
+                        'naming' => $naming,
                     ];
                 }
 
@@ -64,6 +77,29 @@ final class Readme
         }
 
         return $examples;
+    }
+
+    /**
+     * The attribute naming the fence asks for, or the default when it asks for none.
+     *
+     * A fence that names something nobody knows is a broken fixture rather than a
+     * silently ignored word: the page would show an example that nothing checks.
+     */
+    private static function naming(string $fence): AttributeNaming
+    {
+        $asked = \trim(\substr(\trim($fence), \strlen('```markdown')));
+
+        if ($asked === '') {
+            return AttributeNaming::AsWritten;
+        }
+
+        $naming = AttributeNaming::tryFrom($asked);
+
+        if ($naming === null) {
+            throw new BrokenFixture(\sprintf('"%s" is not an attribute naming.', $asked));
+        }
+
+        return $naming;
     }
 
     /**

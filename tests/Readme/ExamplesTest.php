@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use MarkdownOffice\CommonMark\Directive\AttributeNaming;
 use MarkdownOffice\CommonMark\Directive\Tests\Support\Readme;
 
 /**
@@ -18,8 +19,8 @@ describe('the worked examples in the README', function () use ($readme) {
         expect(Readme::examples($readme))->not->toBeEmpty();
     });
 
-    it('converts exactly as the page says it does', function (string $markdown, string $html) {
-        expect(render($markdown))->toBe($html . "\n");
+    it('converts exactly as the page says it does', function (string $markdown, string $html, AttributeNaming $naming) {
+        expect(render($markdown, null, $naming))->toBe($html . "\n");
     })->with(pageDataset('README.md', Readme::examples($readme)));
 
     it('does not claim an example the page does not contain', function () use ($readme) {

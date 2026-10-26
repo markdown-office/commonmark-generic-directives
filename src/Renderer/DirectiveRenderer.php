@@ -22,12 +22,12 @@ use MarkdownOffice\CommonMark\Directive\Node\DirectiveInline;
  * business — a consumer that wants `<aside class="callout">` registers its own renderer
  * over this one rather than asking this one to guess.
  *
- * Where an author's attributes land is {@see AttributeNaming}'s business: the `data-`
- * namespace by default, or the names the author wrote.
+ * Where an author's attributes land is {@see AttributeNaming}'s business: the names the
+ * author wrote by default, or the `data-` namespace.
  */
 final class DirectiveRenderer implements NodeRendererInterface
 {
-    public function __construct(private readonly AttributeNaming $naming = AttributeNaming::Namespaced)
+    public function __construct(private readonly AttributeNaming $naming = AttributeNaming::AsWritten)
     {
     }
 

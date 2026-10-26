@@ -33,9 +33,9 @@ describe('writing a directive as HTML', function () {
             ->and(render(":::a\nx\n:::"))->toContain('<div data-directive="a"');
     });
 
-    it('reproduces the attributes in the data- namespace', function () {
+    it('writes the attributes under the name the author gave them', function () {
         expect(render(":::t{type=info n=2 flag}\nx\n:::"))
-            ->toContain('data-type="info" data-n="2" data-flag');
+            ->toContain('type="info" n="2" flag');
     });
 
     it('renders the body', function () {
@@ -66,37 +66,37 @@ describe('writing a directive as HTML', function () {
             ->toBe('<div data-directive="a"><p>x</p></div>' . "\n");
     });
 
-    it('namespaces an event handler so it cannot become a script', function () use ($body) {
+    it('refuses an event handler so it cannot become a script', function () use ($body) {
         // The document is authored data, and this is the one place where an
         // author-supplied string would otherwise reach a live page as code.
         $html = render(':::t{onclick="steal()"}' . $body);
 
-        expect($html)->toContain('data-onclick="steal()"')
-            ->and($html)->not->toMatch('/<[^>]*\sonclick=/');
+        expect($html)->not->toContain('onclick')
+            ->and($html)->not->toMatch('/<[^>]*\son[a-z]+=/');
     });
 
-    it('keeps an attribute that merely starts with the letters of on', function () use ($body) {
-        // A blocklist of event names would drop `only` along with `onclick`.
-        expect(render(':::t{only=1}' . $body))->toContain('data-only="1"');
+    it('refuses an event handler whatever its case', function () use ($body) {
+        expect(render(':::t{ONCLICK="steal()"}' . $body))->not->toContain('ONCLICK');
+    });
+
+    it('refuses an attribute that merely starts with the letters of on', function () use ($body) {
+        // The rule is a prefix rather than a list of event names, so `only` goes with
+        // `onclick`. The official Attributes extension refuses it too.
+        expect(render(':::t{only=1}' . $body))->not->toContain('only');
+    });
+
+    it('drops an attribute whose name HTML does not accept', function () {
+        // A name that starts with a digit is not a name a browser reads as an
+        // attribute. The official Attributes extension drops those too.
+        expect(trim(render('::t{12=twelve}')))->toBe('<div data-directive="t"></div>');
     });
 
     it('renders a directive with no attributes and no body as an empty element', function () {
         expect(trim(render('::a')))->toBe('<div data-directive="a"></div>');
     });
 
-    it('renders an attribute whose name is all digits, which PHP gave an int key', function () {
-        // `1` and `12` are legal attribute names here and come back out of the array as
-        // integers, so the loop over them has to be a string one or the render is a fatal.
-        expect(trim(render('::t{0=zero 12=twelve 1a=ok}')))
-            ->toBe('<div data-directive="t" data-0="zero" data-12="twelve" data-1a="ok"></div>');
-    });
-
-    it('does not renumber an attribute name that PHP gave an int key', function () {
-        expect(trim(render('::t{12=twelve}')))->toBe('<div data-directive="t" data-12="twelve"></div>');
-    });
-
     it('leaves the name off an element written without one', function () {
-        expect(render("::: {.myClass}\nbody\n:::"))->toBe('<div data-class="myClass"><p>body</p></div>' . "\n");
+        expect(render("::: {.myClass}\nbody\n:::"))->toBe('<div class="myClass"><p>body</p></div>' . "\n");
     });
 
     it('does not let an author attribute name an element that has no name', function () {
@@ -125,52 +125,49 @@ describe('writing a directive as HTML', function () {
     });
 });
 
-describe('writing the attributes as the author wrote them', function () {
-    it('writes them under the name the author gave them', function () {
-        expect(trim(render('::t{type=info n=2 flag}', null, AttributeNaming::AsWritten)))
-            ->toBe('<div data-directive="t" type="info" n="2" flag></div>');
+describe('writing the attributes into the data- namespace', function () {
+    it('reproduces them under a namespaced name', function () {
+        expect(trim(render('::t{type=info n=2 flag}', null, AttributeNaming::Namespaced)))
+            ->toBe('<div data-directive="t" data-type="info" data-n="2" data-flag></div>');
     });
 
-    it('writes the id and class shorthands as id and class', function () {
-        // The same names the official Attributes extension writes them under, so a
-        // document that uses both means the same thing in both.
-        expect(trim(render('::t{#lead .terse}', null, AttributeNaming::AsWritten)))
-            ->toBe('<div data-directive="t" id="lead" class="terse"></div>');
+    it('writes the id and class shorthands as data-id and data-class', function () {
+        expect(trim(render('::t{#lead .terse}', null, AttributeNaming::Namespaced)))
+            ->toBe('<div data-directive="t" data-id="lead" data-class="terse"></div>');
     });
 
     it('keeps the directive name where it is', function () {
         // The name says what the element is, and the author said nothing about it.
-        expect(render('::t{type=info}', null, AttributeNaming::AsWritten))
+        expect(render('::t{type=info}', null, AttributeNaming::Namespaced))
             ->toContain('data-directive="t"');
     });
 
-    it('refuses an event handler, as the official Attributes extension does', function () {
-        // The name starts with `on`, and an attribute with that prefix is a script the
-        // moment it lands on a page that runs scripts.
-        expect(trim(render('::t{onclick="steal()"}', null, AttributeNaming::AsWritten)))
-            ->toBe('<div data-directive="t"></div>');
+    it('namespaces an event handler so it cannot become a script', function () {
+        expect(render('::t{onclick="steal()"}', null, AttributeNaming::Namespaced))
+            ->toContain('data-onclick="steal()"');
     });
 
-    it('refuses an event handler whatever its case', function () {
-        expect(trim(render('::t{ONCLICK="steal()"}', null, AttributeNaming::AsWritten)))
-            ->toBe('<div data-directive="t"></div>');
-    });
-
-    it('refuses an attribute that merely starts with the letters of on', function () {
-        // The rule is a prefix rather than a list of event names, so `only` goes with
-        // `onclick`. The official Attributes extension refuses it too.
-        expect(trim(render('::t{only=1}', null, AttributeNaming::AsWritten)))
-            ->toBe('<div data-directive="t"></div>');
+    it('keeps an attribute that merely starts with the letters of on', function () {
+        // A blocklist of event names would drop `only` along with `onclick`.
+        expect(render('::t{only=1}', null, AttributeNaming::Namespaced))
+            ->toContain('data-only="1"');
     });
 
     it('keeps the reserved key reserved', function () {
-        expect(trim(render('::a{data-directive="b"}', null, AttributeNaming::AsWritten)))
+        expect(trim(render('::a{data-directive="b"}', null, AttributeNaming::Namespaced)))
             ->toBe('<div data-directive="a"></div>');
     });
 
-    it('writes nothing into the data- namespace', function () {
-        expect(render('::t{type=info}', null, AttributeNaming::AsWritten))
-            ->not->toContain('data-type');
+    it('renders an attribute whose name is all digits, which PHP gave an int key', function () {
+        // `1` and `12` are legal attribute names here and come back out of the array as
+        // integers, so the loop over them has to be a string one or the render is a fatal.
+        expect(trim(render('::t{0=zero 12=twelve 1a=ok}', null, AttributeNaming::Namespaced)))
+            ->toBe('<div data-directive="t" data-0="zero" data-12="twelve" data-1a="ok"></div>');
+    });
+
+    it('does not renumber an attribute name that PHP gave an int key', function () {
+        expect(trim(render('::t{12=twelve}', null, AttributeNaming::Namespaced)))
+            ->toBe('<div data-directive="t" data-12="twelve"></div>');
     });
 });
 
