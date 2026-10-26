@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use League\CommonMark\Environment\Environment;
+use League\CommonMark\Extension\Attributes\AttributesExtension;
 use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
 use League\CommonMark\MarkdownConverter;
 use League\CommonMark\Node\Block\Document;
@@ -35,6 +36,48 @@ function environment(?DirectiveRegistry $registry = null, AttributeNaming $namin
 function render(string $markdown, ?DirectiveRegistry $registry = null, AttributeNaming $naming = AttributeNaming::AsWritten): string
 {
     return (string) (new MarkdownConverter(environment($registry, $naming)))->convert($markdown);
+}
+
+/**
+ * The same document rendered with the official Attributes extension.
+ *
+ * The claim the README makes is that the two write the same attributes for the same
+ * syntax, and a claim like that is checked against the extension it names rather than
+ * against a transcription of what that extension writes.
+ */
+function renderWithAttributesExtension(string $markdown): string
+{
+    $environment = new Environment();
+    $environment->addExtension(new CommonMarkCoreExtension());
+    $environment->addExtension(new AttributesExtension());
+
+    return (string) (new MarkdownConverter($environment))->convert($markdown);
+}
+
+/**
+ * The attributes on the first element of an HTML string, sorted, without the key that
+ * carries a directive's name.
+ *
+ * Sorted because the two extensions write the same attributes in a different order: the
+ * official one puts `class` first, this one keeps the order they were written in. The
+ * directive's name is left out because the official Attributes extension has no
+ * directive to name — the comparison is about the attributes the author wrote.
+ *
+ * @return list<string>
+ */
+function attributesOf(string $html): array
+{
+    \preg_match('/<[a-zA-Z]+([^>]*)>/', $html, $element);
+    \preg_match_all('/[\w:.-]+="[^"]*"/', $element[1] ?? '', $found);
+
+    $attributes = \array_values(\array_filter(
+        $found[0],
+        static fn (string $attribute): bool => !\str_starts_with($attribute, 'data-directive=')
+    ));
+
+    \sort($attributes);
+
+    return $attributes;
 }
 
 /**

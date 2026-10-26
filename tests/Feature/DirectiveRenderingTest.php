@@ -38,6 +38,17 @@ describe('writing a directive as HTML', function () {
             ->toContain('type="info" n="2" flag');
     });
 
+    it('writes the id and class shorthands as id and class', function () {
+        expect(trim(render('::t{#lead .terse}')))
+            ->toBe('<div data-directive="t" id="lead" class="terse"></div>');
+    });
+
+    it('writes a named container with a shorthand and an attribute', function () {
+        // `::: thing {#mything lang=en}` — the shape the issue asks for.
+        expect(trim(render(":::thing{#mything lang=en}\nbody\n:::")))
+            ->toBe('<div data-directive="thing" id="mything" lang="en"><p>body</p></div>');
+    });
+
     it('renders the body', function () {
         expect(render(":::a\n**bold**\n:::"))->toContain('<strong>bold</strong>');
     });
@@ -123,6 +134,20 @@ describe('writing a directive as HTML', function () {
         expect((string) (new MarkdownConverter($environment))->convert(":::a\nx\n:::"))
             ->toBe('<aside><p>x</p></aside>' . "\n");
     });
+
+    it('can be used on its own, and writes the attributes as the author wrote them', function () {
+        // The renderer is public API, so its own default is worth a test: the extension
+        // always passes a naming, and nothing else reaches this constructor. The
+        // extension is asked for the namespace here, so the plain output below is the
+        // renderer's own default rather than the extension's.
+        $environment = new Environment();
+        $environment->addExtension(new CommonMarkCoreExtension());
+        $environment->addExtension(new GenericDirectiveExtension(naming: AttributeNaming::Namespaced));
+        $environment->addRenderer(DirectiveBlock::class, new DirectiveRenderer());
+
+        expect((string) (new MarkdownConverter($environment))->convert('::t{type=info}'))
+            ->toBe('<div data-directive="t" type="info"></div>' . "\n");
+    });
 });
 
 describe('writing the attributes into the data- namespace', function () {
@@ -168,6 +193,23 @@ describe('writing the attributes into the data- namespace', function () {
     it('does not renumber an attribute name that PHP gave an int key', function () {
         expect(trim(render('::t{12=twelve}', null, AttributeNaming::Namespaced)))
             ->toBe('<div data-directive="t" data-12="twelve"></div>');
+    });
+});
+
+describe('the agreement with the official Attributes extension', function () {
+    it('writes the same attributes for the same syntax', function () {
+        expect(attributesOf(render('::t{#mything .cls lang=en}')))
+            ->toBe(attributesOf(renderWithAttributesExtension("body\n{#mything .cls lang=en}")));
+    });
+
+    it('refuses an event handler, as the official Attributes extension does', function () {
+        expect(attributesOf(render('::t{onclick="steal()"}')))
+            ->toBe(attributesOf(renderWithAttributesExtension("body\n{onclick=\"steal()\"}")));
+    });
+
+    it('drops a name HTML does not accept, as the official Attributes extension does', function () {
+        expect(attributesOf(render('::t{12=twelve}')))
+            ->toBe(attributesOf(renderWithAttributesExtension("body\n{12=twelve}")));
     });
 });
 
