@@ -30,8 +30,11 @@ final class DirectiveInlineParser implements InlineParserInterface
 
     public function getMatchDefinition(): InlineParserMatch
     {
-        // Directive names are case-sensitive: `Note` and `note` being different things is
-        // what lets a document say `note` without colliding with a later `Note`.
+        // The spelling is kept: the node carries the name the document wrote. Which
+        // directive that name means is the registry's question, and the registry folds the
+        // case — `Note` and `note` are one directive, because a document cannot be asked to
+        // care about case. The pattern itself is case-sensitive, as the block form's is, so
+        // that the two parsers can never come to accept different names.
         return InlineParserMatch::regex(DirectiveSyntax::INLINE_BODY)->caseSensitive();
     }
 

@@ -4,6 +4,17 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- The inline parser's comment claimed that a directive name is case-sensitive, and that
+  `Note` and `note` are different things. The registry has always folded the case — the
+  README says so, and a document cannot be asked to care about case — so the two were one
+  directive all along and the comment said otherwise. It says what is true now: the
+  spelling the document wrote is kept on the node, and the registry decides which
+  directive the name means. The behaviour is unchanged.
+
 ## [0.3.0] - 2026-10-26
 
 ### Changed
