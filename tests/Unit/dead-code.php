@@ -7,19 +7,14 @@ use MarkdownOffice\CommonMark\Directive\Directive\DirectiveSyntax;
 /*
  * Claims that were wrong, kept so they cannot come back.
  *
- * A comment that says something the code does not do is worse than no comment: it is read
- * as a contract by whoever comes next, and nothing in the suite reads prose. The inline
- * parser's claim about the case of a name was one, and the comment that replaced it was
- * another — and a correction is only worth something if the wrong words cannot come back.
- * Each phrase below is one of them; add the next when it is corrected, which is the whole
- * maintenance cost of the list.
+ * A comment that says something the code does not do is read as a contract, and nothing
+ * in the suite reads prose. Each phrase below is one that was corrected.
  */
 
 /**
- * The files holding a phrase, so a claim that has been corrected cannot come back.
+ * The files holding a phrase.
  *
- * Its own walk because it has to skip this file: the list of phrases below is written
- * here, so this file necessarily holds all of them.
+ * Its own walk because it has to skip this file: the phrases below are written here.
  *
  * @return list<string>
  */
@@ -53,9 +48,7 @@ function sourcesWithClaim(string $claim): array
         }
     }
 
-    // The README as well, because a claim about the case of a name is one a reader acts
-    // on. The CHANGELOG is not scanned: it is allowed to name what was wrong, since an
-    // entry recording the change is history rather than a claim about the code.
+    // The README is scanned too; the CHANGELOG is not — an entry recording a change is history.
     if (holdsClaim((string) \file_get_contents(repoPath('README.md')), $claim)) {
         $found[] = 'README.md';
     }
@@ -68,9 +61,7 @@ function sourcesWithClaim(string $claim): array
 /**
  * Whether a text holds a phrase, whatever case it is written in.
  *
- * Folding the case is what makes this a guard rather than a lookup: the sentence a claim
- * lives in begins with a capital often enough that a case-sensitive `str_contains()`
- * misses it, and a guard that can be walked past by starting a sentence is not a guard.
+ * A case-sensitive `str_contains()` misses a sentence that begins with a capital.
  */
 function holdsClaim(string $text, string $claim): bool
 {
@@ -80,10 +71,8 @@ function holdsClaim(string $text, string $claim): bool
 /**
  * A source with its comment markers and line breaks flattened away.
  *
- * A phrase to ban is written here as the claim reads, not as it happens to be wrapped: a
- * sentence a `//` comment puts over two lines is one phrase, and matching the raw bytes
- * for it would find nothing — so the guard would pass against the very words it was
- * added to forbid.
+ * A phrase is written as the claim reads, not as it happens to be wrapped, or the guard
+ * would pass against the very words it forbids.
  */
 function spelledOut(string $source): string
 {
@@ -98,25 +87,21 @@ function spelledOut(string $source): string
 
 it('does not claim again what the code does not do', function (string $claim) {
     // Each of these was a comment asserting something the code does not do. Add the
-    // phrase here when you correct one, so it cannot come back.
+    // phrase here when you correct one.
     expect(sourcesWithClaim($claim))->toBe([]);
 })->with([
-    // The inline parser said a directive name was case-sensitive, and that `Note` and
-    // `note` were different things. The registry folds the case — the README says so —
-    // so the two have always been one directive.
+    // The inline parser said a name was case-sensitive, and that `Note` and `note` were
+    // different things. The registry folds the case, so they have always been one.
     'a directive name is case-sensitive' => 'Directive names are case-sensitive',
     'two spellings of a name are different directives' => '`Note` and `note` being different things',
-    // The comment that replaced it said the pattern was case-sensitive, and that this
-    // was what kept the two parsers in step. It is not: a name is a character class, so
-    // the pattern takes either case and the flag has nothing to fold. What keeps the two
+    // The comment that replaced it said the pattern was case-sensitive; what keeps the two
     // parsers in step is the `DirectiveSyntax::NAME` they share.
     'the pattern decides the case of a name' => 'pattern itself is case-sensitive',
     'the flag is what keeps the two parsers in step' => 'the two parsers can never come to accept different names',
 ]);
 
 it('takes the same name in the block and the inline form', function () {
-    // The claim the inline parser's comment makes: the two parsers agree because they
-    // share `DirectiveSyntax::NAME`, so a name written in either case is one name.
+    // The claim the inline parser's comment makes: a name in either case is one name.
     foreach (['note', 'Note', 'NOTE', 'col-2'] as $name) {
         $block = DirectiveSyntax::matchBlock('::' . $name);
 

@@ -119,8 +119,7 @@ describe('the registry behaviour the README describes', function () {
     );
 
     it('matches names case-insensitively, as the README says', function () {
-        // The name is folded to find the directive and kept as it was written to put it
-        // on the node, so the two are one directive and the spelling is the author's.
+        // The name is folded to find the directive and kept as it was written on the node.
         expect(render(":::COL\n:::\n", new DirectiveRegistry(['col'])))
             ->toContain('data-directive="COL"')
             ->and(render('A :Col[x] b', new DirectiveRegistry(['col'])))
