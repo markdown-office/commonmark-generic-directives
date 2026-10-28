@@ -33,8 +33,11 @@ final class DirectiveInlineParser implements InlineParserInterface
         // The spelling is kept: the node carries the name the document wrote. Which
         // directive that name means is the registry's question, and the registry folds the
         // case — `Note` and `note` are one directive, because a document cannot be asked to
-        // care about case. The pattern itself is case-sensitive, as the block form's is, so
-        // that the two parsers can never come to accept different names.
+        // care about case. The name is a character class, so the pattern takes either case
+        // and there is nothing for the flag to fold. The two parsers accept the same names
+        // because they share `DirectiveSyntax::NAME`; the flag stays because a match is
+        // case-insensitive unless it says otherwise, and a literal the pattern grows later
+        // has to be matched as written.
         return InlineParserMatch::regex(DirectiveSyntax::INLINE_BODY)->caseSensitive();
     }
 
