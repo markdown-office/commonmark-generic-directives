@@ -13,11 +13,13 @@ use Stringable;
 /**
  * A `:text` directive sitting inside a paragraph.
  *
- * The label is carried both as a string and as a `Text` child, so a consumer that only
- * wants to render it does not have to walk children, and one that wants to walk children
- * still finds text there.
+ * The label is carried twice: as the string the author wrote between the brackets, and as
+ * the inline Markdown it is parsed into. {@see self::getLabel()} is the string and the
+ * children are the parsed form, because the RFC asks for both — the consumer that wants the
+ * text the author wrote and the consumer that wants the markup are not the same consumer.
  *
- * The label is *not* parsed as inline Markdown — see {@see DirectiveInlineParser} for why.
+ * A node built by hand keeps its label as text; the parser is what parses it — see
+ * {@see DirectiveInlineParser}.
  */
 final class DirectiveInline extends AbstractInline implements Stringable
 {

@@ -4,6 +4,30 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-11-18
+
+### Changed
+
+- **The label of a text directive is parsed as inline Markdown.** `:badge[**now**]` carries a
+  bold run rather than four asterisks, which is what the RFC asks for: the content of an
+  inline directive "may be further inline markdown elements to be interpreted". The string
+  the author wrote is kept beside the parsed form — `getLabel()` still answers with it and
+  `__toString()` still writes the directive back to its source — so a consumer that wants
+  the text and a consumer that wants the markup are both served.
+
+### Notes
+
+- The parse is a second pass. CommonMark's inline engine appends into the paragraph it was
+  given and offers no way for a parser to claim the rest of a run, so the label is parsed
+  on its own and the nodes it makes are moved into the directive.
+- A directive written in a label is content rather than a directive. A label holds no
+  brackets, so a directive written there could carry no label of its own and would draw as
+  an empty span: `:badge[see :other]` is the text "see :other".
+- A label holds no brackets and therefore no link. `[text](url)` in a label ends the label
+  at the first `]` and the rest is written as ordinary Markdown.
+- The label of a leaf and of a container is still text. Neither is content: one is the
+  alternative text of a picture and the other a title.
+
 ## [0.3.1] - 2026-10-30
 
 ### Fixed
@@ -107,3 +131,4 @@ All notable changes to this package are documented here. The format follows
 [0.2.0]: https://github.com/markdown-office/commonmark-generic-directives/releases/tag/v0.2.0
 [0.3.0]: https://github.com/markdown-office/commonmark-generic-directives/releases/tag/v0.3.0
 [0.3.1]: https://github.com/markdown-office/commonmark-generic-directives/releases/tag/v0.3.1
+[0.4.0]: https://github.com/markdown-office/commonmark-generic-directives/releases/tag/v0.4.0

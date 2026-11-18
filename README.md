@@ -150,6 +150,35 @@ easy steps:</p>
 </ol></div>
 ```
 
+## The label of a text directive
+
+The label of a text directive is parsed as inline Markdown, so the emphasis in it is
+emphasis:
+
+```markdown
+Ship it :badge[**now**]{type=success} today.
+```
+
+```html
+<p>Ship it <span data-directive="badge" type="success"><strong>now</strong></span> today.</p>
+```
+
+The RFC asks for this: the content of an inline directive "may be further inline markdown
+elements to be interpreted and then printed in one way or another". The string the author
+wrote is kept beside the parsed form, so `getLabel()` answers with the string and the
+children are the markup — the consumer that wants the text and the consumer that wants the
+formatting are not the same consumer.
+
+Two things a label cannot hold:
+
+- **A link.** A label holds no brackets, so `[text](url)` in one ends the label at the first
+  `]` and the rest is written as ordinary Markdown.
+- **A directive.** For the same reason a directive written in a label could carry no label
+  of its own: `:badge[see :other]` is the text "see :other".
+
+The label of a leaf and of a container is text rather than Markdown, because neither is
+content: one is the alternative text of a picture and the other a title.
+
 ## Attributes
 
 ```markdown
