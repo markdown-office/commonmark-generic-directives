@@ -211,6 +211,25 @@ describe('the HTML claims the README makes', function () {
     });
 });
 
+describe('the label the README describes', function () use ($readme) {
+    it('says the label of a text directive is parsed as inline Markdown', function () use ($readme) {
+        expect((string) file_get_contents($readme))
+            ->toContain('The label of a text directive is parsed as inline Markdown');
+    });
+
+    it('keeps the string the author wrote beside the parsed form, as the page says', function () {
+        $found = directive(parse('Ship it :badge[**now**] today.'), 'badge');
+
+        expect($found->getLabel())->toBe('**now**')
+            ->and(textOf($found))->toBe('now');
+    });
+
+    it('leaves the label of a leaf and of a container as text, as the page says', function () {
+        expect(directive(parse('::image[**Revenue**]'), 'image')->getLabel())->toBe('**Revenue**')
+            ->and(directive(parse(":::col[**Revenue**]\nx\n:::"), 'col')->getLabel())->toBe('**Revenue**');
+    });
+});
+
 describe('the gates the README quotes', function () use ($readme) {
     it('still holds', function () use ($readme) {
         // The page makes two quantitative claims about itself. Cheap to check, and a
@@ -226,7 +245,7 @@ describe('the gates the README quotes', function () use ($readme) {
 
 describe('the README extractor', function () use ($readme) {
     it('finds the paired examples it claims to find', function () use ($readme) {
-        expect(Readme::examples($readme))->toHaveCount(6);
+        expect(Readme::examples($readme))->toHaveCount(7);
     });
 
     it('reads the naming a fence asks for', function () {

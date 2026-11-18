@@ -243,6 +243,47 @@ describe('a text directive', function () {
     });
 });
 
+describe('the label of a text directive', function () {
+    it('is parsed as inline Markdown', function () {
+        expect(trim(render('Ship it :badge[**now**] today.')))->toBe(
+            '<p>Ship it <span data-directive="badge"><strong>now</strong></span> today.</p>'
+        );
+    });
+
+    it('is parsed as the Markdown it is written in', function () {
+        expect(trim(render('A :badge[_quiet_ `code`] b')))->toBe(
+            '<p>A <span data-directive="badge"><em>quiet</em> <code>code</code></span> b</p>'
+        );
+    });
+
+    it('keeps the string the author wrote beside the parsed form', function () {
+        $found = directive(parse('Ship it :badge[**now**] today.'), 'badge');
+
+        expect($found->getLabel())->toBe('**now**')
+            ->and(textOf($found))->toBe('now');
+    });
+
+    it('writes itself back to the source it was parsed from', function () {
+        expect((string) directive(parse('Ship it :badge[**now**] today.'), 'badge'))->toBe(':badge[**now**]');
+    });
+
+    it('takes a directive written in a label for content', function () {
+        // A label holds no brackets, so a directive written there could carry no label of
+        // its own and would draw as an empty span. It is a word the author wrote.
+        $found = directive(parse('Ship it :badge[see :other] today.'), 'badge');
+
+        expect(textOf($found))->toBe('see :other')
+            ->and($found->children())->toHaveCount(1);
+    });
+
+    it('leaves the label of a leaf and of a container as text', function () {
+        // The two block shapes carry a title and an alternative text rather than content,
+        // and neither is Markdown.
+        expect(directive(parse('::image[**Revenue**]'), 'image')->getLabel())->toBe('**Revenue**')
+            ->and(directive(parse(":::col[**Revenue**]\nx\n:::"), 'col')->getLabel())->toBe('**Revenue**');
+    });
+});
+
 describe('what is deliberately not a directive', function () {
     it('leaves a colon before a space alone', function () {
         expect(trim(render('Note: this is prose.')))->toBe('<p>Note: this is prose.</p>');
