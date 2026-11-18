@@ -61,6 +61,10 @@ describe('writing a directive as HTML', function () {
         expect(render('::image[<script>alert(1)</script>]'))->not->toContain('<script>');
     });
 
+    it('escapes the raw HTML in the label of a text directive rather than writing it as markup', function () {
+        expect(render('A :t[<script>alert(1)</script>] b'))->not->toContain('<script>');
+    });
+
     it('escapes an attribute value rather than writing it as markup', function () use ($body) {
         expect(render(':::t{title="<script>alert(1)</script>"}' . $body))
             ->not->toContain('<script>');

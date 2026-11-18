@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use League\CommonMark\Extension\CommonMark\Node\Inline\Link;
+use League\CommonMark\Node\Inline\Text;
 use MarkdownOffice\CommonMark\Directive\Directive\DirectiveRegistry;
 use MarkdownOffice\CommonMark\Directive\DirectiveType;
 use MarkdownOffice\CommonMark\Directive\Exception\UnknownDirective;
@@ -268,12 +270,29 @@ describe('the label of a text directive', function () {
     });
 
     it('takes a directive written in a label for content', function () {
-        // A label holds no brackets, so a directive written there could carry no label of
-        // its own and would draw as an empty span. It is a word the author wrote.
+        // A directive written there could carry no label of its own and would draw as an
+        // empty span. It is a word the author wrote.
         $found = directive(parse('Ship it :badge[see :other] today.'), 'badge');
 
         expect(textOf($found))->toBe('see :other')
             ->and($found->children())->toHaveCount(1);
+    });
+
+    it('writes the raw HTML in a label as the text it is', function () {
+        // A label is Markdown, and the package does not let an author's text become markup
+        // in one. The leaf's label has always been escaped; this is the same rule.
+        $found = directive(parse('A :t[<b>x</b>] b'), 't');
+
+        expect($found->children())->toHaveCount(1)
+            ->and($found->firstChild())->toBeInstanceOf(Text::class)
+            ->and(textOf($found))->toBe('<b>x</b>');
+    });
+
+    it('writes an autolink in a label as the link it is', function () {
+        // An autolink is Markdown and not raw HTML, so it stays a link.
+        $found = directive(parse('A :t[<https://example.com>] b'), 't');
+
+        expect($found->firstChild())->toBeInstanceOf(Link::class);
     });
 
     it('leaves the label of a leaf and of a container as text', function () {

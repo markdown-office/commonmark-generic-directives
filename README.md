@@ -166,15 +166,18 @@ Ship it :badge[**now**]{type=success} today.
 The RFC asks for this: the content of an inline directive "may be further inline markdown
 elements to be interpreted and then printed in one way or another". The string the author
 wrote is kept beside the parsed form, so `getLabel()` answers with the string and the
-children are the markup — the consumer that wants the text and the consumer that wants the
-formatting are not the same consumer.
+children are the markup.
 
-Two things a label cannot hold:
+A label holds no brackets, and that is what it comes to:
 
-- **A link.** A label holds no brackets, so `[text](url)` in one ends the label at the first
-  `]` and the rest is written as ordinary Markdown.
-- **A directive.** For the same reason a directive written in a label could carry no label
-  of its own: `:badge[see :other]` is the text "see :other".
+- **A link.** A label that holds a bracket is not a label at all: the directive ends at its
+  name and `[text](url)` is written as ordinary Markdown.
+- **A directive.** A directive written in a label could carry no label of its own:
+  `:badge[see :other]` is the text "see :other".
+
+Raw HTML in a label is written as the text it is. A label is Markdown, and the package does
+not let an author's text become markup in one. An autolink is Markdown and stays the link it
+is.
 
 The label of a leaf and of a container is text rather than Markdown, because neither is
 content: one is the alternative text of a picture and the other a title.
