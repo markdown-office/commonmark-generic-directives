@@ -98,6 +98,11 @@ it('does not claim again what the code does not do', function (string $claim) {
     // parsers in step is the `DirectiveSyntax::NAME` they share.
     'the pattern decides the case of a name' => 'pattern itself is case-sensitive',
     'the flag is what keeps the two parsers in step' => 'the two parsers can never come to accept different names',
+    // The label of a text directive is parsed as inline Markdown since 0.4.0. The parser
+    // and the node both said it was text, and the node said it twice.
+    'a label that is text rather than parsed markdown' => 'The label is stored as text rather than parsed as inline Markdown',
+    'a label that is not parsed markdown' => 'The label is *not* parsed as inline Markdown',
+    'a label carried as a string and as text' => 'The label is carried both as a string and as a `Text` child',
 ]);
 
 it('takes the same name in the block and the inline form', function () {

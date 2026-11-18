@@ -15,8 +15,7 @@ use Stringable;
  *
  * The label is carried twice: as the string the author wrote between the brackets, and as
  * the inline Markdown it is parsed into. {@see self::getLabel()} is the string and the
- * children are the parsed form, because the RFC asks for both — the consumer that wants the
- * text the author wrote and the consumer that wants the markup are not the same consumer.
+ * children are the parsed form.
  *
  * A node built by hand keeps its label as text; the parser is what parses it — see
  * {@see DirectiveInlineParser}.

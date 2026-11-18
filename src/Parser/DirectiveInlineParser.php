@@ -6,7 +6,11 @@ namespace MarkdownOffice\CommonMark\Directive\Parser;
 
 use League\CommonMark\Environment\EnvironmentAwareInterface;
 use League\CommonMark\Environment\EnvironmentInterface;
+use League\CommonMark\Extension\CommonMark\Node\Inline\HtmlInline;
 use League\CommonMark\Node\Block\Paragraph;
+use League\CommonMark\Node\Inline\AdjacentTextMerger;
+use League\CommonMark\Node\Inline\Text;
+use League\CommonMark\Node\Node;
 use League\CommonMark\Parser\Inline\InlineParserInterface;
 use League\CommonMark\Parser\Inline\InlineParserMatch;
 use League\CommonMark\Parser\InlineParserContext;
@@ -21,35 +25,33 @@ use MarkdownOffice\CommonMark\Directive\Node\DirectiveInline;
  *
  * The label is parsed as inline Markdown, so `:badge[**Ship it**]` carries a bold run and
  * not four asterisks. The RFC says the content of an inline directive "may be further inline
- * markdown elements to be interpreted", and the string the author wrote stays beside the
- * parsed form: {@see DirectiveInline::getLabel()} is the string, the children are the
- * markup.
+ * markdown elements to be interpreted".
  *
- * The parse is a second pass. CommonMark's inline engine appends into the paragraph it was
+ * The parse is a second pass: CommonMark's inline engine appends into the paragraph it was
  * given and offers no way for a parser to say "the rest of this run is mine", so the label
  * is parsed on its own and the nodes it makes are moved into the directive.
  *
  * league/commonmark has no public way to run an inline parse over a string:
- * `InlineParserEngine` is the one that does it, and league marks it `@internal`. The
- * suite's presentation half already uses it for the same thing.
+ * `InlineParserEngine` is the one that does it, and league marks it `@internal` — as it
+ * marks the `AdjacentTextMerger` that goes with it. The suite's presentation half already
+ * uses the first for the same thing.
  */
 final class DirectiveInlineParser implements InlineParserInterface, EnvironmentAwareInterface
 {
     /**
      * The environment the label is parsed with.
      *
-     * The environment hands it over when the parser is registered, and a parser that is
-     * not registered cannot parse anything, so there is no path on which this is unset.
+     * The environment hands it over when the parser is registered, and a parser that is not
+     * registered is never asked to parse.
      */
     private EnvironmentInterface $environment;
 
     /**
      * Whether a label is being parsed right now.
      *
-     * A directive inside a label is content rather than a directive: a label holds no
-     * brackets, so a directive written there could carry no label of its own and would
-     * render as an empty span. The registry would also be asked about a name the author
-     * wrote as prose.
+     * A directive written in a label is content rather than a directive: it could carry no
+     * label of its own and would render as an empty span, and the registry would be asked
+     * about a name the author wrote as prose.
      */
     private bool $parsingLabel = false;
 
@@ -101,17 +103,14 @@ final class DirectiveInlineParser implements InlineParserInterface, EnvironmentA
     /**
      * The three cases in which what looks like a directive is not one.
      *
-     * Each is a reason of its own, and none of them is the others, so they are named
-     * rather than folded into one condition.
+     * Each is a reason of its own, so they are named rather than folded into one
+     * condition.
      */
     private function refusesTheMatch(InlineParserContext $inlineContext): bool
     {
         $cursor = $inlineContext->getCursor();
 
-        // A directive inside a label is content rather than a directive: a label holds no
-        // brackets, so a directive written there could carry no label of its own and would
-        // render as an empty span. The registry would also be asked about a name the author
-        // wrote as prose.
+        // A directive inside a label is content, not a directive.
         $inLabel = $this->parsingLabel;
 
         // `word:name[...]` is prose, not a directive. Without this, a URL fragment or a
@@ -129,12 +128,6 @@ final class DirectiveInlineParser implements InlineParserInterface, EnvironmentA
         return $inLabel || $afterWord || $afterColon;
     }
 
-    /**
-     * The label as the inline Markdown it is written in.
-     *
-     * The reference map is the one the document is being parsed with, rather than a fresh
-     * one, so that a label is parsed in the document it was written in.
-     */
     private function parseLabel(DirectiveInline $node, string $label, InlineParserContext $inlineContext): void
     {
         $paragraph = new Paragraph();
@@ -142,10 +135,14 @@ final class DirectiveInlineParser implements InlineParserInterface, EnvironmentA
         $this->parsingLabel = true;
 
         try {
+            // The document's reference map, so that a label is parsed in the document it
+            // was written in.
             (new InlineParserEngine($this->environment, $inlineContext->getReferenceMap()))->parse($label, $paragraph);
         } finally {
             $this->parsingLabel = false;
         }
+
+        $this->writeHtmlAsText($paragraph);
 
         // The constructor put the label there as text; the parsed form replaces it.
         $node->detachChildren();
@@ -153,5 +150,28 @@ final class DirectiveInlineParser implements InlineParserInterface, EnvironmentA
         foreach ($paragraph->children() as $child) {
             $node->appendChild($child);
         }
+    }
+
+    /**
+     * The raw HTML in a label, written as the text it is.
+     *
+     * A label is Markdown, and the package does not let an author's text become markup in
+     * one — the rule the leaf's label has always had. An autolink is not raw HTML and
+     * stays the link it is.
+     */
+    private function writeHtmlAsText(Node $node): void
+    {
+        foreach (\iterator_to_array($node->children()) as $child) {
+            if ($child instanceof HtmlInline) {
+                $child->replaceWith(new Text($child->getLiteral()));
+
+                continue;
+            }
+
+            $this->writeHtmlAsText($child);
+        }
+
+        // The demotion leaves text beside text where the engine had one run.
+        AdjacentTextMerger::mergeChildNodes($node);
     }
 }
