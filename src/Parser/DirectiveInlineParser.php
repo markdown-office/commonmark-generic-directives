@@ -73,28 +73,11 @@ final class DirectiveInlineParser implements InlineParserInterface, EnvironmentA
 
     public function parse(InlineParserContext $inlineContext): bool
     {
-        if ($this->parsingLabel) {
+        if ($this->refusesTheMatch($inlineContext)) {
             return false;
         }
 
         $cursor = $inlineContext->getCursor();
-
-        // `word:name[...]` is prose, not a directive. Without this, a URL fragment or a
-        // `status:error` in a sentence would become a node.
-        $previous = $cursor->peek(-1);
-
-        if ($previous !== null && \preg_match('/\w/', $previous) === 1) {
-            return false;
-        }
-
-        // The tail of a leaf or container fence that leaked into a paragraph is not a text
-        // directive; `::` belongs to the block parser. `(?!\:)` in `INLINE_BODY` has already
-        // refused the first colon of a pair, so this has to refuse the second — and the cursor
-        // sits on the colon being matched, which is what `peek(-1)` reads. One further back is
-        // the colon before a space, which refused `Note: :badge[x]`: prose, on its way in.
-        if ($cursor->peek(-1) === ':') {
-            return false;
-        }
 
         // The engine already ran this pattern and handed back what it captured, so the
         // groups are read rather than matched a second time.
@@ -113,6 +96,37 @@ final class DirectiveInlineParser implements InlineParserInterface, EnvironmentA
         }
 
         return true;
+    }
+
+    /**
+     * The three cases in which what looks like a directive is not one.
+     *
+     * Each is a reason of its own, and none of them is the others, so they are named
+     * rather than folded into one condition.
+     */
+    private function refusesTheMatch(InlineParserContext $inlineContext): bool
+    {
+        $cursor = $inlineContext->getCursor();
+
+        // A directive inside a label is content rather than a directive: a label holds no
+        // brackets, so a directive written there could carry no label of its own and would
+        // render as an empty span. The registry would also be asked about a name the author
+        // wrote as prose.
+        $inLabel = $this->parsingLabel;
+
+        // `word:name[...]` is prose, not a directive. Without this, a URL fragment or a
+        // `status:error` in a sentence would become a node.
+        $previous = $cursor->peek(-1);
+        $afterWord = $previous !== null && \preg_match('/\w/', $previous) === 1;
+
+        // The tail of a leaf or container fence that leaked into a paragraph is not a text
+        // directive; `::` belongs to the block parser. `(?!\:)` in `INLINE_BODY` has already
+        // refused the first colon of a pair, so this has to refuse the second — and the cursor
+        // sits on the colon being matched, which is what `peek(-1)` reads. One further back is
+        // the colon before a space, which refused `Note: :badge[x]`: prose, on its way in.
+        $afterColon = $cursor->peek(-1) === ':';
+
+        return $inLabel || $afterWord || $afterColon;
     }
 
     /**
