@@ -23,11 +23,12 @@ All notable changes to this package are documented here. The format follows
 - A directive written in a label is content rather than a directive. A label holds no
   brackets, so a directive written there could carry no label of its own and would draw as
   an empty span: `:badge[see :other]` is the text "see :other".
-- A label holds no brackets and therefore no link. A label that holds one is not a label at
-  all: the directive ends at its name and `[text](url)` is written as ordinary Markdown.
+- A label holds no brackets, so it holds no link in the bracket form. A label that holds a
+  bracket is not a label at all: the directive ends at its name and `[text](url)` is written
+  as ordinary Markdown.
 - Raw HTML in a label is written as the text it is. A label is Markdown, and the package
-  does not let an author's text become markup in one. An autolink is Markdown and stays the
-  link it is.
+  does not let an author's text become markup in one. An autolink is Markdown and not raw
+  HTML, so it stays the link it is.
 - The label of a leaf and of a container is still text. Neither is content: one is the
   alternative text of a picture and the other a title.
 

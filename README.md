@@ -170,8 +170,8 @@ children are the markup.
 
 A label holds no brackets, and that is what it comes to:
 
-- **A link.** A label that holds a bracket is not a label at all: the directive ends at its
-  name and `[text](url)` is written as ordinary Markdown.
+- **A link.** Not one in the bracket form: a label that holds a bracket is not a label at
+  all, so the directive ends at its name and `[text](url)` is written as ordinary Markdown.
 - **A directive.** A directive written in a label could carry no label of its own:
   `:badge[see :other]` is the text "see :other".
 
